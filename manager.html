@@ -1,0 +1,761 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stock Manager Pro</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .suggestion-item:hover {
+            background-color: #f3f4f6;
+        }
+        .chart-bar {
+            transition: all 0.3s ease;
+        }
+        .chart-bar:hover {
+            opacity: 0.8;
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen">
+    <div class="container mx-auto px-4 py-8">
+        <!-- Header -->
+        <div class="bg-white rounded-lg shadow-lg p-6 mb-8">
+            <h1 class="text-3xl font-bold text-gray-800 mb-2">📦 Stock Manager Pro</h1>
+            <p class="text-gray-600">Manage your inventory with powerful analytics and insights</p>
+        </div>
+
+        <!-- Navigation Tabs -->
+        <div class="bg-white rounded-lg shadow-lg mb-8">
+            <div class="flex border-b">
+                <button onclick="showTab('add')" id="addTab" class="px-6 py-3 font-medium text-blue-600 border-b-2 border-blue-600">Add Product</button>
+                <button onclick="showTab('analytics')" id="analyticsTab" class="px-6 py-3 font-medium text-gray-500 hover:text-blue-600">Analytics</button>
+                <button onclick="showTab('sell')" id="sellTab" class="px-6 py-3 font-medium text-gray-500 hover:text-blue-600">Sell Product</button>
+                <button onclick="showTab('backup')" id="backupTab" class="px-6 py-3 font-medium text-gray-500 hover:text-blue-600">Data Backup</button>
+            </div>
+        </div>
+
+        <!-- Add Product Section -->
+        <div id="addSection" class="bg-white rounded-lg shadow-lg p-6 mb-8">
+            <h2 class="text-2xl font-bold text-gray-800 mb-6">➕ Add New Product</h2>
+            <form id="productForm" class="grid grid-cols-1 md:grid-cols-6 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Product Name</label>
+                    <div class="relative">
+                        <input type="text" id="productName" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Enter product name" required>
+                        <div id="suggestions" class="absolute z-10 w-full bg-white border border-gray-300 rounded-md mt-1 hidden max-h-40 overflow-y-auto"></div>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Size</label>
+                    <input type="text" id="productSize" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="e.g., Large, 500ml" required>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Color</label>
+                    <input type="text" id="productColor" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Enter color code" required>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Quantity</label>
+                    <input type="number" id="productQuantity" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="0" min="0" required>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Price (₹)</label>
+                    <input type="number" id="productPrice" step="0.01" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="0.00" min="0" required>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">SKU (Auto-generated)</label>
+                    <input type="text" id="productSKU" class="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-100" readonly>
+                </div>
+            </form>
+            <button onclick="addProduct()" class="mt-4 bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-md font-medium transition-colors">Add Product</button>
+            
+            <!-- Color Chart -->
+            <div class="mt-6 bg-gray-50 rounded-lg p-4">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-lg font-bold text-gray-800">🎨 Color Chart</h3>
+                    <button onclick="showAddColorForm()" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors">+ Add Color</button>
+                </div>
+                
+                <!-- Add Color Form (Hidden by default) -->
+                <div id="addColorForm" class="hidden mb-4 p-4 bg-white rounded-lg border">
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Color Name</label>
+                            <input type="text" id="newColorName" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="e.g., Blue">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Abbreviation</label>
+                            <input type="text" id="newColorAbbr" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="e.g., bl" maxlength="2">
+                        </div>
+                        <div class="flex items-end gap-2">
+                            <button onclick="addNewColor()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors">Add</button>
+                            <button onclick="hideAddColorForm()" class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors">Cancel</button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Color Grid -->
+                <div id="colorChart" class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3"></div>
+            </div>
+            
+            <!-- Product List -->
+            <div class="mt-8">
+                <h3 class="text-xl font-bold text-gray-800 mb-4">📋 Current Inventory</h3>
+                <div class="overflow-x-auto">
+                    <table class="w-full border-collapse border border-gray-300">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="border border-gray-300 px-4 py-2 text-left">SKU</th>
+                                <th class="border border-gray-300 px-4 py-2 text-left">Product Name</th>
+                                <th class="border border-gray-300 px-4 py-2 text-left">Size</th>
+                                <th class="border border-gray-300 px-4 py-2 text-left">Color</th>
+                                <th class="border border-gray-300 px-4 py-2 text-left">Quantity</th>
+                                <th class="border border-gray-300 px-4 py-2 text-left">Price</th>
+                                <th class="border border-gray-300 px-4 py-2 text-left">Total Sold</th>
+                            </tr>
+                        </thead>
+                        <tbody id="productList">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Analytics Section -->
+        <div id="analyticsSection" class="hidden">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+                <!-- Top Selling Products -->
+                <div class="bg-white rounded-lg shadow-lg p-6">
+                    <h3 class="text-xl font-bold text-gray-800 mb-4">🏆 Top 10 Best Sellers</h3>
+                    <div id="topSelling" class="space-y-2"></div>
+                </div>
+
+                <!-- Least Selling Products -->
+                <div class="bg-white rounded-lg shadow-lg p-6">
+                    <h3 class="text-xl font-bold text-gray-800 mb-4">📉 Least Selling Products</h3>
+                    <div id="leastSelling" class="space-y-2"></div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <!-- Low Stock Alert -->
+                <div class="bg-white rounded-lg shadow-lg p-6">
+                    <h3 class="text-xl font-bold text-gray-800 mb-4">⚠️ Low Stock Alert</h3>
+                    <div id="lowStock" class="space-y-2"></div>
+                </div>
+
+                <!-- Revenue Insights -->
+                <div class="bg-white rounded-lg shadow-lg p-6">
+                    <h3 class="text-xl font-bold text-gray-800 mb-4">💰 Revenue Insights</h3>
+                    <div id="revenueInsights" class="space-y-4"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sell Product Section -->
+        <div id="sellSection" class="hidden bg-white rounded-lg shadow-lg p-6">
+            <h2 class="text-2xl font-bold text-gray-800 mb-6">💳 Sell Product</h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Select Product</label>
+                    <select id="sellProductSelect" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <option value="">Choose a product...</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Quantity to Sell</label>
+                    <input type="number" id="sellQuantity" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="0" min="1">
+                </div>
+                <div class="flex items-end">
+                    <button onclick="sellProduct()" class="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-md font-medium transition-colors">Process Sale</button>
+                </div>
+            </div>
+            
+            <!-- Sale Summary -->
+            <div id="saleSummary" class="mt-6 p-4 bg-green-50 border border-green-200 rounded-md hidden">
+                <h4 class="font-bold text-green-800 mb-2">✅ Sale Completed!</h4>
+                <div id="saleDetails"></div>
+            </div>
+
+            <!-- Recent Sales -->
+            <div class="mt-8">
+                <h3 class="text-xl font-bold text-gray-800 mb-4">📊 Recent Sales</h3>
+                <div class="overflow-x-auto">
+                    <table class="w-full border-collapse border border-gray-300">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="border border-gray-300 px-4 py-2 text-left">Date</th>
+                                <th class="border border-gray-300 px-4 py-2 text-left">Product</th>
+                                <th class="border border-gray-300 px-4 py-2 text-left">Quantity</th>
+                                <th class="border border-gray-300 px-4 py-2 text-left">Revenue</th>
+                            </tr>
+                        </thead>
+                        <tbody id="salesHistory">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Backup Section -->
+        <div id="backupSection" class="hidden bg-white rounded-lg shadow-lg p-6">
+            <h2 class="text-2xl font-bold text-gray-800 mb-6">💾 Data Backup & Restore</h2>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div>
+                    <h3 class="text-lg font-bold text-gray-700 mb-4">📤 Export Data</h3>
+                    <p class="text-gray-600 mb-4">Download your inventory and sales data as a JSON file for backup.</p>
+                    <button onclick="exportData()" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-md font-medium transition-colors">Download Backup</button>
+                </div>
+                
+                <div>
+                    <h3 class="text-lg font-bold text-gray-700 mb-4">📥 Import Data</h3>
+                    <p class="text-gray-600 mb-4">Restore your data from a previously exported backup file.</p>
+                    <input type="file" id="importFile" accept=".json" class="mb-4 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
+                    <button onclick="importData()" class="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-md font-medium transition-colors">Restore Backup</button>
+                </div>
+            </div>
+
+            <div class="mt-8 p-4 bg-yellow-50 border border-yellow-200 rounded-md">
+                <h4 class="font-bold text-yellow-800 mb-2">⚠️ Auto-Save Feature</h4>
+                <p class="text-yellow-700">Your data is automatically saved to your browser's local storage. This backup feature provides additional security for your important inventory data.</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Data storage
+        let products = JSON.parse(localStorage.getItem('stockManager_products')) || [];
+        let sales = JSON.parse(localStorage.getItem('stockManager_sales')) || [];
+        let colorChart = JSON.parse(localStorage.getItem('stockManager_colors')) || [
+            {name: 'Black', abbr: 'bl', color: '#000000'},
+            {name: 'White', abbr: 'wh', color: '#ffffff'},
+            {name: 'Red', abbr: 'rd', color: '#ef4444'},
+            {name: 'Blue', abbr: 'bu', color: '#3b82f6'},
+            {name: 'Green', abbr: 'gr', color: '#10b981'},
+            {name: 'Yellow', abbr: 'yl', color: '#f59e0b'},
+            {name: 'Purple', abbr: 'pr', color: '#8b5cf6'},
+            {name: 'Orange', abbr: 'or', color: '#f97316'},
+            {name: 'Pink', abbr: 'pk', color: '#ec4899'},
+            {name: 'Brown', abbr: 'br', color: '#a3a3a3'},
+            {name: 'Gray', abbr: 'gy', color: '#6b7280'},
+            {name: 'Navy', abbr: 'nv', color: '#1e40af'}
+        ];
+
+        // Initialize the app
+        document.addEventListener('DOMContentLoaded', function() {
+            updateProductList();
+            updateSellProductSelect();
+            updateAnalytics();
+            updateSalesHistory();
+            updateColorChart();
+            
+            // Auto-generate SKU as user types and add auto-focus
+            ['productName', 'productSize', 'productColor'].forEach(id => {
+                document.getElementById(id).addEventListener('input', generateSKU);
+            });
+
+            // Add auto-focus and enter key handling
+            setupAutoFocus();
+
+            // Auto-suggest functionality
+            document.getElementById('productName').addEventListener('input', showSuggestions);
+            document.addEventListener('click', hideSuggestions);
+        });
+
+        // Tab switching
+        function showTab(tabName) {
+            // Hide all sections
+            document.getElementById('addSection').classList.add('hidden');
+            document.getElementById('analyticsSection').classList.add('hidden');
+            document.getElementById('sellSection').classList.add('hidden');
+            document.getElementById('backupSection').classList.add('hidden');
+
+            // Reset tab styles
+            ['addTab', 'analyticsTab', 'sellTab', 'backupTab'].forEach(id => {
+                const tab = document.getElementById(id);
+                tab.classList.remove('text-blue-600', 'border-blue-600');
+                tab.classList.add('text-gray-500');
+            });
+
+            // Show selected section and highlight tab
+            if (tabName === 'add') {
+                document.getElementById('addSection').classList.remove('hidden');
+                document.getElementById('addTab').classList.add('text-blue-600', 'border-blue-600');
+            } else if (tabName === 'analytics') {
+                document.getElementById('analyticsSection').classList.remove('hidden');
+                document.getElementById('analyticsTab').classList.add('text-blue-600', 'border-blue-600');
+                updateAnalytics();
+            } else if (tabName === 'sell') {
+                document.getElementById('sellSection').classList.remove('hidden');
+                document.getElementById('sellTab').classList.add('text-blue-600', 'border-blue-600');
+                updateSellProductSelect();
+            } else if (tabName === 'backup') {
+                document.getElementById('backupSection').classList.remove('hidden');
+                document.getElementById('backupTab').classList.add('text-blue-600', 'border-blue-600');
+            }
+        }
+
+        // Generate SKU automatically
+        function generateSKU() {
+            const name = document.getElementById('productName').value;
+            const size = document.getElementById('productSize').value;
+            const color = document.getElementById('productColor').value;
+            
+            if (name && size && color) {
+                // Take first 2 characters of each word in product name
+                const nameWords = name.split(' ');
+                let nameAbbr = '';
+                if (nameWords.length >= 2) {
+                    nameAbbr = nameWords[0].substring(0, 1).toUpperCase() + nameWords[1].substring(0, 1).toUpperCase();
+                } else {
+                    nameAbbr = name.substring(0, 2).toUpperCase();
+                }
+                
+                const sizeAbbr = size.replace(/[^0-9]/g, ''); // Extract numbers only
+                const colorAbbr = color.toLowerCase().substring(0, 2);
+                
+                document.getElementById('productSKU').value = `${nameAbbr}${sizeAbbr}${colorAbbr}`;
+            }
+        }
+
+        // Setup auto-focus functionality
+        function setupAutoFocus() {
+            const inputs = ['productName', 'productSize', 'productColor', 'productQuantity', 'productPrice'];
+            
+            inputs.forEach((inputId, index) => {
+                const input = document.getElementById(inputId);
+                
+                input.addEventListener('keydown', function(e) {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        if (index < inputs.length - 1) {
+                            // Move to next input
+                            document.getElementById(inputs[index + 1]).focus();
+                        } else {
+                            // Last input - add product
+                            addProduct();
+                        }
+                    }
+                });
+            });
+        }
+
+        // Auto-suggest functionality
+        function showSuggestions() {
+            const input = document.getElementById('productName');
+            const suggestions = document.getElementById('suggestions');
+            const query = input.value.toLowerCase();
+
+            if (query.length < 2) {
+                suggestions.classList.add('hidden');
+                return;
+            }
+
+            const uniqueNames = [...new Set(products.map(p => p.name))];
+            const matches = uniqueNames.filter(name => 
+                name.toLowerCase().includes(query)
+            ).slice(0, 5);
+
+            if (matches.length > 0) {
+                suggestions.innerHTML = matches.map(name => 
+                    `<div class="suggestion-item px-3 py-2 cursor-pointer" onclick="selectSuggestion('${name}')">${name}</div>`
+                ).join('');
+                suggestions.classList.remove('hidden');
+            } else {
+                suggestions.classList.add('hidden');
+            }
+        }
+
+        function selectSuggestion(name) {
+            document.getElementById('productName').value = name;
+            document.getElementById('suggestions').classList.add('hidden');
+            generateSKU();
+        }
+
+        function hideSuggestions(event) {
+            if (!event.target.closest('#productName') && !event.target.closest('#suggestions')) {
+                document.getElementById('suggestions').classList.add('hidden');
+            }
+        }
+
+        // Add product
+        function addProduct() {
+            const name = document.getElementById('productName').value;
+            const size = document.getElementById('productSize').value;
+            const color = document.getElementById('productColor').value;
+            const quantity = parseInt(document.getElementById('productQuantity').value);
+            const price = parseFloat(document.getElementById('productPrice').value);
+            const sku = document.getElementById('productSKU').value;
+
+            if (!name || !size || !color || !quantity || !price || !sku) {
+                alert('Please fill in all fields');
+                return;
+            }
+
+            // Check if SKU already exists
+            if (products.find(p => p.sku === sku)) {
+                alert('SKU already exists. Please modify the product details.');
+                return;
+            }
+
+            const product = {
+                sku,
+                name,
+                size,
+                color,
+                quantity,
+                price,
+                totalSold: 0,
+                dateAdded: new Date().toISOString()
+            };
+
+            products.push(product);
+            saveData();
+            updateProductList();
+            updateSellProductSelect();
+            
+            // Clear form and focus on first input
+            document.getElementById('productForm').reset();
+            document.getElementById('productSKU').value = '';
+            document.getElementById('productName').focus();
+            
+            alert('Product added successfully!');
+        }
+
+        // Update product list display
+        function updateProductList() {
+            const tbody = document.getElementById('productList');
+            tbody.innerHTML = products.map(product => `
+                <tr class="hover:bg-gray-50">
+                    <td class="border border-gray-300 px-4 py-2 font-mono text-sm">${product.sku}</td>
+                    <td class="border border-gray-300 px-4 py-2">${product.name}</td>
+                    <td class="border border-gray-300 px-4 py-2">${product.size}</td>
+                    <td class="border border-gray-300 px-4 py-2">${product.color}</td>
+                    <td class="border border-gray-300 px-4 py-2 ${product.quantity < 10 ? 'text-red-600 font-bold' : ''}">${product.quantity}</td>
+                    <td class="border border-gray-300 px-4 py-2">₹${product.price.toFixed(2)}</td>
+                    <td class="border border-gray-300 px-4 py-2">${product.totalSold}</td>
+                </tr>
+            `).join('');
+        }
+
+        // Update sell product dropdown
+        function updateSellProductSelect() {
+            const select = document.getElementById('sellProductSelect');
+            const availableProducts = products.filter(p => p.quantity > 0);
+            
+            select.innerHTML = '<option value="">Choose a product...</option>' + 
+                availableProducts.map(product => 
+                    `<option value="${product.sku}">${product.name} (${product.size}, ${product.color}) - Stock: ${product.quantity}</option>`
+                ).join('');
+        }
+
+        // Sell product
+        function sellProduct() {
+            const sku = document.getElementById('sellProductSelect').value;
+            const quantity = parseInt(document.getElementById('sellQuantity').value);
+
+            if (!sku || !quantity) {
+                alert('Please select a product and enter quantity');
+                return;
+            }
+
+            const product = products.find(p => p.sku === sku);
+            if (!product) {
+                alert('Product not found');
+                return;
+            }
+
+            if (quantity > product.quantity) {
+                alert(`Not enough stock. Available: ${product.quantity}`);
+                return;
+            }
+
+            // Process sale
+            product.quantity -= quantity;
+            product.totalSold += quantity;
+
+            const sale = {
+                id: Date.now(),
+                sku: product.sku,
+                productName: product.name,
+                quantity,
+                price: product.price,
+                total: quantity * product.price,
+                date: new Date().toISOString()
+            };
+
+            sales.push(sale);
+            saveData();
+            updateProductList();
+            updateSellProductSelect();
+            updateSalesHistory();
+
+            // Show sale summary
+            const summary = document.getElementById('saleSummary');
+            const details = document.getElementById('saleDetails');
+            details.innerHTML = `
+                <p><strong>Product:</strong> ${product.name} (${product.size}, ${product.color})</p>
+                <p><strong>Quantity Sold:</strong> ${quantity}</p>
+                <p><strong>Revenue:</strong> ₹${sale.total.toFixed(2)}</p>
+                <p><strong>Remaining Stock:</strong> ${product.quantity}</p>
+            `;
+            summary.classList.remove('hidden');
+
+            // Clear form
+            document.getElementById('sellProductSelect').value = '';
+            document.getElementById('sellQuantity').value = '';
+
+            setTimeout(() => {
+                summary.classList.add('hidden');
+            }, 5000);
+        }
+
+        // Update sales history
+        function updateSalesHistory() {
+            const tbody = document.getElementById('salesHistory');
+            const recentSales = sales.slice(-10).reverse();
+            
+            tbody.innerHTML = recentSales.map(sale => `
+                <tr class="hover:bg-gray-50">
+                    <td class="border border-gray-300 px-4 py-2">${new Date(sale.date).toLocaleDateString()}</td>
+                    <td class="border border-gray-300 px-4 py-2">${sale.productName}</td>
+                    <td class="border border-gray-300 px-4 py-2">${sale.quantity}</td>
+                    <td class="border border-gray-300 px-4 py-2 text-green-600 font-bold">₹${sale.total.toFixed(2)}</td>
+                </tr>
+            `).join('');
+        }
+
+        // Update analytics
+        function updateAnalytics() {
+            updateTopSelling();
+            updateLeastSelling();
+            updateLowStock();
+            updateRevenueInsights();
+        }
+
+        function updateTopSelling() {
+            const sorted = [...products].sort((a, b) => b.totalSold - a.totalSold).slice(0, 10);
+            const container = document.getElementById('topSelling');
+            
+            if (sorted.length === 0) {
+                container.innerHTML = '<p class="text-gray-500">No sales data available</p>';
+                return;
+            }
+
+            const maxSold = Math.max(...sorted.map(p => p.totalSold));
+            
+            container.innerHTML = sorted.map((product, index) => {
+                const percentage = maxSold > 0 ? (product.totalSold / maxSold) * 100 : 0;
+                return `
+                    <div class="flex items-center justify-between p-2 border-b">
+                        <div class="flex-1">
+                            <div class="flex justify-between items-center mb-1">
+                                <span class="font-medium">${index + 1}. ${product.name}</span>
+                                <span class="text-sm text-gray-600">${product.totalSold} sold</span>
+                            </div>
+                            <div class="w-full bg-gray-200 rounded-full h-2">
+                                <div class="chart-bar bg-green-500 h-2 rounded-full" style="width: ${percentage}%"></div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function updateLeastSelling() {
+            const sorted = [...products].sort((a, b) => a.totalSold - b.totalSold).slice(0, 10);
+            const container = document.getElementById('leastSelling');
+            
+            container.innerHTML = sorted.map((product, index) => `
+                <div class="flex justify-between items-center p-2 border-b">
+                    <span class="font-medium">${index + 1}. ${product.name}</span>
+                    <span class="text-sm text-gray-600">${product.totalSold} sold</span>
+                </div>
+            `).join('');
+        }
+
+        function updateLowStock() {
+            const lowStockProducts = products.filter(p => p.quantity < 10).sort((a, b) => a.quantity - b.quantity);
+            const container = document.getElementById('lowStock');
+            
+            if (lowStockProducts.length === 0) {
+                container.innerHTML = '<p class="text-green-600">✅ All products are well stocked!</p>';
+                return;
+            }
+
+            container.innerHTML = lowStockProducts.map(product => `
+                <div class="flex justify-between items-center p-2 border-b ${product.quantity === 0 ? 'bg-red-50' : 'bg-yellow-50'}">
+                    <span class="font-medium">${product.name} (${product.size})</span>
+                    <span class="text-sm font-bold ${product.quantity === 0 ? 'text-red-600' : 'text-yellow-600'}">
+                        ${product.quantity === 0 ? 'OUT OF STOCK' : `${product.quantity} left`}
+                    </span>
+                </div>
+            `).join('');
+        }
+
+        function updateRevenueInsights() {
+            const totalRevenue = sales.reduce((sum, sale) => sum + sale.total, 0);
+            const totalProducts = products.length;
+            const totalSales = sales.reduce((sum, sale) => sum + sale.quantity, 0);
+            const avgOrderValue = sales.length > 0 ? totalRevenue / sales.length : 0;
+
+            const container = document.getElementById('revenueInsights');
+            container.innerHTML = `
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="bg-green-50 p-4 rounded-lg">
+                        <h4 class="font-bold text-green-800">Total Revenue</h4>
+                        <p class="text-2xl font-bold text-green-600">₹${totalRevenue.toFixed(2)}</p>
+                    </div>
+                    <div class="bg-blue-50 p-4 rounded-lg">
+                        <h4 class="font-bold text-blue-800">Total Products</h4>
+                        <p class="text-2xl font-bold text-blue-600">${totalProducts}</p>
+                    </div>
+                    <div class="bg-purple-50 p-4 rounded-lg">
+                        <h4 class="font-bold text-purple-800">Items Sold</h4>
+                        <p class="text-2xl font-bold text-purple-600">${totalSales}</p>
+                    </div>
+                    <div class="bg-orange-50 p-4 rounded-lg">
+                        <h4 class="font-bold text-orange-800">Avg Order Value</h4>
+                        <p class="text-2xl font-bold text-orange-600">₹${avgOrderValue.toFixed(2)}</p>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Data backup and restore
+        function exportData() {
+            const data = {
+                products,
+                sales,
+                exportDate: new Date().toISOString(),
+                version: '1.0'
+            };
+
+            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `stock-manager-backup-${new Date().toISOString().split('T')[0]}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+
+            alert('Backup downloaded successfully!');
+        }
+
+        function importData() {
+            const fileInput = document.getElementById('importFile');
+            const file = fileInput.files[0];
+
+            if (!file) {
+                alert('Please select a backup file');
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = JSON.parse(e.target.result);
+                    
+                    if (data.products && data.sales) {
+                        if (confirm('This will replace all current data. Are you sure?')) {
+                            products = data.products;
+                            sales = data.sales;
+                            saveData();
+                            updateProductList();
+                            updateSellProductSelect();
+                            updateAnalytics();
+                            updateSalesHistory();
+                            alert('Data restored successfully!');
+                            fileInput.value = '';
+                        }
+                    } else {
+                        alert('Invalid backup file format');
+                    }
+                } catch (error) {
+                    alert('Error reading backup file');
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        // Color Chart Functions
+        function updateColorChart() {
+            const container = document.getElementById('colorChart');
+            container.innerHTML = colorChart.map(color => `
+                <div class="bg-white rounded-lg p-3 border hover:shadow-md transition-shadow cursor-pointer" onclick="selectColor('${color.abbr}')">
+                    <div class="w-full h-8 rounded-md border-2 border-gray-300 mb-2" style="background-color: ${color.color}"></div>
+                    <div class="text-center">
+                        <div class="font-medium text-sm text-gray-800">${color.name}</div>
+                        <div class="text-xs text-gray-500 font-mono">${color.abbr}</div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function selectColor(abbr) {
+            document.getElementById('productColor').value = abbr;
+            generateSKU();
+        }
+
+        function showAddColorForm() {
+            document.getElementById('addColorForm').classList.remove('hidden');
+            document.getElementById('newColorName').focus();
+        }
+
+        function hideAddColorForm() {
+            document.getElementById('addColorForm').classList.add('hidden');
+            document.getElementById('newColorName').value = '';
+            document.getElementById('newColorAbbr').value = '';
+        }
+
+        function addNewColor() {
+            const name = document.getElementById('newColorName').value.trim();
+            const abbr = document.getElementById('newColorAbbr').value.trim().toLowerCase();
+
+            if (!name || !abbr) {
+                alert('Please enter both color name and abbreviation');
+                return;
+            }
+
+            if (abbr.length !== 2) {
+                alert('Abbreviation must be exactly 2 characters');
+                return;
+            }
+
+            if (colorChart.find(c => c.abbr === abbr)) {
+                alert('This abbreviation already exists');
+                return;
+            }
+
+            // Generate a random color
+            const colors = ['#ef4444', '#f97316', '#f59e0b', '#eab308', '#84cc16', '#22c55e', '#10b981', '#14b8a6', '#06b6d4', '#0ea5e9', '#3b82f6', '#6366f1', '#8b5cf6', '#a855f7', '#d946ef', '#ec4899', '#f43f5e'];
+            const randomColor = colors[Math.floor(Math.random() * colors.length)];
+
+            const newColor = {
+                name: name,
+                abbr: abbr,
+                color: randomColor
+            };
+
+            colorChart.push(newColor);
+            saveColorData();
+            updateColorChart();
+            hideAddColorForm();
+            alert('Color added successfully!');
+        }
+
+        function saveColorData() {
+            localStorage.setItem('stockManager_colors', JSON.stringify(colorChart));
+        }
+
+        // Save data to localStorage
+        function saveData() {
+            localStorage.setItem('stockManager_products', JSON.stringify(products));
+            localStorage.setItem('stockManager_sales', JSON.stringify(sales));
+        }
+    </script>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'978d822db3373f03',t:'MTc1NjgyMTM2My4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>
