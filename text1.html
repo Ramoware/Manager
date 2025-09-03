@@ -1,0 +1,1366 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stock Manager Pro - Multi-Device Sync</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .chart-bar {
+            transition: width 0.3s ease;
+        }
+        .suggestion-item:hover {
+            background-color: #f3f4f6;
+        }
+        #suggestions {
+            max-height: 200px;
+            overflow-y: auto;
+            z-index: 1000;
+        }
+        .fade-in {
+            animation: fadeIn 0.3s ease-in;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .login-container {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+    </style>
+</head>
+<body class="bg-gray-100">
+    <!-- Login Screen -->
+    <div id="loginScreen" class="login-container flex items-center justify-center">
+        <div class="bg-white rounded-lg shadow-2xl p-8 w-full max-w-md">
+            <div class="text-center mb-8">
+                <h1 class="text-3xl font-bold text-gray-800 mb-2">📦 Stock Manager Pro</h1>
+                <p class="text-gray-600">Multi-Device Inventory System</p>
+            </div>
+            
+            <form id="loginForm" class="space-y-6">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Username</label>
+                    <input type="text" id="username" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Enter username" required>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Password</label>
+                    <input type="password" id="password" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Enter password" required>
+                </div>
+                <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg font-medium transition-colors">
+                    Login
+                </button>
+            </form>
+            
+            <div class="mt-6 p-4 bg-blue-50 rounded-lg">
+                <p class="text-sm text-blue-800"><strong>Demo Credentials:</strong></p>
+                <p class="text-sm text-blue-600">Username: ram</p>
+                <p class="text-sm text-blue-600">Password: ram</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Application -->
+    <div id="mainApp" class="hidden">
+        <!-- Header -->
+        <header class="bg-white shadow-lg">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex justify-between items-center py-6">
+                    <div class="flex items-center">
+                        <h1 class="text-3xl font-bold text-gray-900">📦 Stock Manager Pro</h1>
+                        <div id="syncStatus" class="ml-4 px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
+                            ✅ Synced
+                        </div>
+                    </div>
+                    <div class="flex items-center space-x-4">
+                        <button onclick="syncData()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md font-medium transition-colors">
+                            🔄 Sync Now
+                        </button>
+                        <button onclick="logout()" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md font-medium transition-colors">
+                            Logout
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Navigation -->
+        <nav class="bg-white border-b border-gray-200">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex space-x-8">
+                    <button id="addTab" onclick="showTab('add')" class="py-4 px-1 border-b-2 font-medium text-sm text-blue-600 border-blue-600">
+                        ➕ Add Product
+                    </button>
+                    <button id="analyticsTab" onclick="showTab('analytics')" class="py-4 px-1 border-b-2 border-transparent font-medium text-sm text-gray-500 hover:text-gray-700">
+                        📊 Analytics
+                    </button>
+                    <button id="sellTab" onclick="showTab('sell')" class="py-4 px-1 border-b-2 border-transparent font-medium text-sm text-gray-500 hover:text-gray-700">
+                        💳 Sell Product
+                    </button>
+                    <button id="reportsTab" onclick="showTab('reports')" class="py-4 px-1 border-b-2 border-transparent font-medium text-sm text-gray-500 hover:text-gray-700">
+                        📋 Sales Reports
+                    </button>
+                    <button id="backupTab" onclick="showTab('backup')" class="py-4 px-1 border-b-2 border-transparent font-medium text-sm text-gray-500 hover:text-gray-700">
+                        💾 Backup
+                    </button>
+                </div>
+            </div>
+        </nav>
+
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <!-- Add Product Section -->
+            <div id="addSection">
+                <div class="bg-white rounded-lg shadow-lg p-6 mb-8">
+                    <h2 class="text-2xl font-bold text-gray-800 mb-6">➕ Add New Product</h2>
+                    
+                    <!-- Auto-suggestions dropdown -->
+                    <div id="suggestions" class="hidden absolute bg-white border border-gray-300 rounded-md shadow-lg mt-1 w-full max-w-md z-10"></div>
+                    
+                    <form id="productForm" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        <div class="relative">
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Product Name</label>
+                            <input type="text" id="productName" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="e.g., T-Shirt" required>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Size</label>
+                            <input type="text" id="productSize" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="e.g., XL, 42, Medium" required>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Color</label>
+                            <input type="text" id="productColor" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="e.g., bl, rd, gr" required>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Quantity</label>
+                            <input type="number" id="productQuantity" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="0" min="0" required>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Price (₹)</label>
+                            <input type="number" step="0.01" id="productPrice" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="0.00" min="0" required>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">SKU</label>
+                            <div class="flex">
+                                <input type="text" id="productSKU" class="flex-1 px-3 py-2 border border-gray-300 rounded-l-md focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Auto-generated or custom">
+                                <button type="button" onclick="generateSKU()" class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-r-md text-sm transition-colors">
+                                    Auto
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                    <button onclick="addProduct()" class="mt-4 bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-md font-medium transition-colors">Add Product</button>
+                    
+                    <!-- Color Chart -->
+                    <div class="mt-6 bg-gray-50 rounded-lg p-4">
+                        <div class="flex justify-between items-center mb-4">
+                            <h3 class="text-lg font-bold text-gray-800">🎨 Color Chart</h3>
+                            <button onclick="showAddColorForm()" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors">+ Add Color</button>
+                        </div>
+                        
+                        <!-- Add Color Form (Hidden by default) -->
+                        <div id="addColorForm" class="hidden mb-4 p-4 bg-white rounded-lg border">
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Color Name</label>
+                                    <input type="text" id="newColorName" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="e.g., Blue">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Abbreviation</label>
+                                    <input type="text" id="newColorAbbr" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="e.g., bl" maxlength="2">
+                                </div>
+                                <div class="flex items-end gap-2">
+                                    <button onclick="addNewColor()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors">Add</button>
+                                    <button onclick="hideAddColorForm()" class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors">Cancel</button>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Color Grid -->
+                        <div id="colorChart" class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3"></div>
+                    </div>
+                    
+                    <!-- Product List -->
+                    <div class="mt-8">
+                        <h3 class="text-xl font-bold text-gray-800 mb-4">📋 Current Inventory</h3>
+                        <div class="overflow-x-auto">
+                            <table class="w-full border-collapse border border-gray-300">
+                                <thead class="bg-gray-50">
+                                    <tr>
+                                        <th class="border border-gray-300 px-4 py-2 text-left">SKU</th>
+                                        <th class="border border-gray-300 px-4 py-2 text-left">Product Name</th>
+                                        <th class="border border-gray-300 px-4 py-2 text-left">Size</th>
+                                        <th class="border border-gray-300 px-4 py-2 text-left">Color</th>
+                                        <th class="border border-gray-300 px-4 py-2 text-left">Quantity</th>
+                                        <th class="border border-gray-300 px-4 py-2 text-left">Price</th>
+                                        <th class="border border-gray-300 px-4 py-2 text-left">Total Sold</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="productList">
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Analytics Section -->
+            <div id="analyticsSection" class="hidden">
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+                    <!-- Top Selling Products -->
+                    <div class="bg-white rounded-lg shadow-lg p-6">
+                        <h3 class="text-xl font-bold text-gray-800 mb-4">🏆 Top 10 Best Sellers</h3>
+                        <div id="topSelling" class="space-y-2"></div>
+                    </div>
+
+                    <!-- Least Selling Products -->
+                    <div class="bg-white rounded-lg shadow-lg p-6">
+                        <h3 class="text-xl font-bold text-gray-800 mb-4">📉 Least Selling Products</h3>
+                        <div id="leastSelling" class="space-y-2"></div>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    <!-- Low Stock Alert -->
+                    <div class="bg-white rounded-lg shadow-lg p-6">
+                        <h3 class="text-xl font-bold text-gray-800 mb-4">⚠️ Low Stock Alert</h3>
+                        <div id="lowStock" class="space-y-2"></div>
+                    </div>
+
+                    <!-- Revenue Insights -->
+                    <div class="bg-white rounded-lg shadow-lg p-6">
+                        <h3 class="text-xl font-bold text-gray-800 mb-4">💰 Revenue Insights</h3>
+                        <div id="revenueInsights" class="space-y-4"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sell Product Section -->
+            <div id="sellSection" class="hidden bg-white rounded-lg shadow-lg p-6">
+                <h2 class="text-2xl font-bold text-gray-800 mb-6">💳 Sell Product</h2>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Select Product (by SKU or Name)</label>
+                        <input type="text" id="sellProductSearch" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Search by SKU or product name...">
+                        <div id="sellSuggestions" class="hidden absolute bg-white border border-gray-300 rounded-md shadow-lg mt-1 w-full max-w-md z-10"></div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Quantity to Sell</label>
+                        <input type="number" id="sellQuantity" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="0" min="1">
+                    </div>
+                    <div class="flex items-end">
+                        <button onclick="sellProduct()" class="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-md font-medium transition-colors">Process Sale</button>
+                    </div>
+                </div>
+                
+                <!-- Sale Summary -->
+                <div id="saleSummary" class="mt-6 p-4 bg-green-50 border border-green-200 rounded-md hidden">
+                    <h4 class="font-bold text-green-800 mb-2">✅ Sale Completed!</h4>
+                    <div id="saleDetails"></div>
+                </div>
+
+                <!-- Recent Sales -->
+                <div class="mt-8">
+                    <h3 class="text-xl font-bold text-gray-800 mb-4">📊 Recent Sales</h3>
+                    <div class="overflow-x-auto">
+                        <table class="w-full border-collapse border border-gray-300">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="border border-gray-300 px-4 py-2 text-left">Date</th>
+                                    <th class="border border-gray-300 px-4 py-2 text-left">Product</th>
+                                    <th class="border border-gray-300 px-4 py-2 text-left">Quantity</th>
+                                    <th class="border border-gray-300 px-4 py-2 text-left">Revenue</th>
+                                </tr>
+                            </thead>
+                            <tbody id="salesHistory">
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sales Reports Section -->
+            <div id="reportsSection" class="hidden bg-white rounded-lg shadow-lg p-6">
+                <h2 class="text-2xl font-bold text-gray-800 mb-6">📋 Sales Reports</h2>
+                
+                <!-- Report Filters -->
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Report Type</label>
+                        <select id="reportType" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <option value="today">Today</option>
+                            <option value="week">This Week</option>
+                            <option value="month">This Month</option>
+                            <option value="year">This Year</option>
+                            <option value="custom">Custom Range</option>
+                        </select>
+                    </div>
+                    <div id="customDateRange" class="hidden col-span-2">
+                        <div class="grid grid-cols-2 gap-2">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">From Date</label>
+                                <input type="date" id="fromDate" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">To Date</label>
+                                <input type="date" id="toDate" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flex items-end">
+                        <button onclick="generateReport()" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-md font-medium transition-colors mr-2">Generate Report</button>
+                        <button onclick="downloadReport()" class="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-md font-medium transition-colors">📥 Download</button>
+                    </div>
+                </div>
+
+                <!-- Report Summary -->
+                <div id="reportSummary" class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6 hidden">
+                    <div class="bg-blue-50 p-4 rounded-lg">
+                        <h4 class="font-bold text-blue-800">Total Sales</h4>
+                        <p id="reportTotalSales" class="text-2xl font-bold text-blue-600">0</p>
+                    </div>
+                    <div class="bg-green-50 p-4 rounded-lg">
+                        <h4 class="font-bold text-green-800">Revenue</h4>
+                        <p id="reportRevenue" class="text-2xl font-bold text-green-600">₹0</p>
+                    </div>
+                    <div class="bg-purple-50 p-4 rounded-lg">
+                        <h4 class="font-bold text-purple-800">Items Sold</h4>
+                        <p id="reportItemsSold" class="text-2xl font-bold text-purple-600">0</p>
+                    </div>
+                    <div class="bg-orange-50 p-4 rounded-lg">
+                        <h4 class="font-bold text-orange-800">Avg Order</h4>
+                        <p id="reportAvgOrder" class="text-2xl font-bold text-orange-600">₹0</p>
+                    </div>
+                </div>
+
+                <!-- Report Table -->
+                <div id="reportTable" class="hidden">
+                    <h3 class="text-lg font-bold text-gray-800 mb-4">📦 Products to Ship</h3>
+                    <div class="overflow-x-auto">
+                        <table class="w-full border-collapse border border-gray-300">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="border border-gray-300 px-4 py-2 text-left">SKU</th>
+                                    <th class="border border-gray-300 px-4 py-2 text-left">Product Name</th>
+                                    <th class="border border-gray-300 px-4 py-2 text-left">Size</th>
+                                    <th class="border border-gray-300 px-4 py-2 text-left">Color</th>
+                                    <th class="border border-gray-300 px-4 py-2 text-left">Total Quantity</th>
+                                    <th class="border border-gray-300 px-4 py-2 text-left">Sales Count</th>
+                                </tr>
+                            </thead>
+                            <tbody id="reportTableBody">
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Backup Section -->
+            <div id="backupSection" class="hidden bg-white rounded-lg shadow-lg p-6">
+                <h2 class="text-2xl font-bold text-gray-800 mb-6">💾 Data Management</h2>
+                
+                <!-- Google Sheets Integration -->
+                <div class="mb-8 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                    <h3 class="text-lg font-bold text-blue-800 mb-4">☁️ Google Sheets Integration</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Google Apps Script URL</label>
+                            <input type="url" id="scriptUrl" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" value="https://script.google.com/macros/s/AKfycbxQ7ZIqQX6YVpvk0hpsde3EEb0UDS6KsQntfmbXpwqZxJFtELK9ySIqMTMCRx1lhrk/exec">
+                        </div>
+                        <div class="flex items-end gap-2">
+                            <button onclick="saveScriptUrl()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md font-medium transition-colors">Save URL</button>
+                            <button onclick="testConnection()" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md font-medium transition-colors">Test</button>
+                        </div>
+                    </div>
+                    <p class="text-sm text-blue-600 mt-2">Set up Google Apps Script to sync data across devices. <a href="#" onclick="showSetupInstructions()" class="underline">View Setup Instructions</a></p>
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div>
+                        <h3 class="text-lg font-bold text-gray-700 mb-4">📤 Export Data</h3>
+                        <p class="text-gray-600 mb-4">Download your inventory and sales data as a JSON file for backup.</p>
+                        <button onclick="exportData()" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-md font-medium transition-colors">Download Backup</button>
+                    </div>
+                    
+                    <div>
+                        <h3 class="text-lg font-bold text-gray-700 mb-4">📥 Import Data</h3>
+                        <p class="text-gray-600 mb-4">Restore your data from a previously exported backup file.</p>
+                        <input type="file" id="importFile" accept=".json" class="mb-4 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
+                        <button onclick="importData()" class="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-md font-medium transition-colors">Restore Backup</button>
+                    </div>
+                </div>
+
+                <!-- Setup Instructions Modal -->
+                <div id="setupModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                    <div class="bg-white rounded-lg p-6 max-w-2xl w-full mx-4 max-h-96 overflow-y-auto">
+                        <h3 class="text-xl font-bold mb-4">Google Apps Script Setup Instructions</h3>
+                        <div class="space-y-4 text-sm">
+                            <div>
+                                <h4 class="font-bold">Step 1: Create Google Sheet</h4>
+                                <p>Create a new Google Sheet with sheets named "Products" and "Sales"</p>
+                            </div>
+                            <div>
+                                <h4 class="font-bold">Step 2: Open Apps Script</h4>
+                                <p>Go to Extensions → Apps Script in your Google Sheet</p>
+                            </div>
+                            <div>
+                                <h4 class="font-bold">Step 3: Copy the Script</h4>
+                                <textarea readonly class="w-full h-32 p-2 border rounded text-xs" id="scriptCode"></textarea>
+                            </div>
+                            <div>
+                                <h4 class="font-bold">Step 4: Deploy as Web App</h4>
+                                <p>Deploy → New Deployment → Web App → Execute as "Me" → Access "Anyone"</p>
+                            </div>
+                        </div>
+                        <button onclick="hideSetupInstructions()" class="mt-4 bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-md">Close</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Authentication
+        const VALID_CREDENTIALS = {
+            username: 'ram',
+            password: 'ram'
+        };
+
+        // Data storage
+        let products = JSON.parse(localStorage.getItem('stockManager_products')) || [];
+        let sales = JSON.parse(localStorage.getItem('stockManager_sales')) || [];
+        let colorChart = JSON.parse(localStorage.getItem('stockManager_colors')) || [
+            {name: 'Black', abbr: 'bl', color: '#000000'},
+            {name: 'White', abbr: 'wh', color: '#ffffff'},
+            {name: 'Red', abbr: 'rd', color: '#ef4444'},
+            {name: 'Blue', abbr: 'bu', color: '#3b82f6'},
+            {name: 'Green', abbr: 'gr', color: '#10b981'},
+            {name: 'Yellow', abbr: 'yl', color: '#f59e0b'},
+            {name: 'Purple', abbr: 'pr', color: '#8b5cf6'},
+            {name: 'Orange', abbr: 'or', color: '#f97316'},
+            {name: 'Pink', abbr: 'pk', color: '#ec4899'},
+            {name: 'Brown', abbr: 'br', color: '#a3a3a3'},
+            {name: 'Gray', abbr: 'gy', color: '#6b7280'},
+            {name: 'Navy', abbr: 'nv', color: '#1e40af'}
+        ];
+
+        let currentReportData = [];
+        let scriptUrl = localStorage.getItem('stockManager_scriptUrl') || '';
+
+        // Initialize the app
+        document.addEventListener('DOMContentLoaded', function() {
+            // Check if user is logged in
+            if (localStorage.getItem('stockManager_loggedIn') === 'true') {
+                showMainApp();
+            }
+
+            // Login form handler
+            document.getElementById('loginForm').addEventListener('submit', function(e) {
+                e.preventDefault();
+                login();
+            });
+
+            // Report type change handler
+            document.getElementById('reportType').addEventListener('change', function() {
+                if (this.value === 'custom') {
+                    document.getElementById('customDateRange').classList.remove('hidden');
+                } else {
+                    document.getElementById('customDateRange').classList.add('hidden');
+                }
+            });
+
+            // Sell product search
+            document.getElementById('sellProductSearch').addEventListener('input', showSellSuggestions);
+            document.addEventListener('click', hideSellSuggestions);
+
+            // Load script URL
+            if (scriptUrl) {
+                document.getElementById('scriptUrl').value = scriptUrl;
+            }
+        });
+
+        // Authentication functions
+        function login() {
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+
+            if (username === VALID_CREDENTIALS.username && password === VALID_CREDENTIALS.password) {
+                localStorage.setItem('stockManager_loggedIn', 'true');
+                showMainApp();
+            } else {
+                alert('Invalid credentials. Please try again.');
+            }
+        }
+
+        function logout() {
+            localStorage.removeItem('stockManager_loggedIn');
+            document.getElementById('loginScreen').classList.remove('hidden');
+            document.getElementById('mainApp').classList.add('hidden');
+            document.getElementById('username').value = '';
+            document.getElementById('password').value = '';
+        }
+
+        function showMainApp() {
+            document.getElementById('loginScreen').classList.add('hidden');
+            document.getElementById('mainApp').classList.remove('hidden');
+            
+            // Initialize app data
+            updateProductList();
+            updateAnalytics();
+            updateSalesHistory();
+            updateColorChart();
+            
+            // Auto-generate SKU as user types and add auto-focus
+            ['productName', 'productSize', 'productColor'].forEach(id => {
+                document.getElementById(id).addEventListener('input', generateSKU);
+            });
+
+            // Add auto-focus and enter key handling
+            setupAutoFocus();
+
+            // Auto-suggest functionality
+            document.getElementById('productName').addEventListener('input', showSuggestions);
+            document.addEventListener('click', hideSuggestions);
+
+            // Auto-sync every 5 minutes
+            setInterval(syncData, 300000);
+        }
+
+        // Tab switching
+        function showTab(tabName) {
+            // Hide all sections
+            document.getElementById('addSection').classList.add('hidden');
+            document.getElementById('analyticsSection').classList.add('hidden');
+            document.getElementById('sellSection').classList.add('hidden');
+            document.getElementById('reportsSection').classList.add('hidden');
+            document.getElementById('backupSection').classList.add('hidden');
+
+            // Reset tab styles
+            ['addTab', 'analyticsTab', 'sellTab', 'reportsTab', 'backupTab'].forEach(id => {
+                const tab = document.getElementById(id);
+                tab.classList.remove('text-blue-600', 'border-blue-600');
+                tab.classList.add('text-gray-500');
+            });
+
+            // Show selected section and highlight tab
+            if (tabName === 'add') {
+                document.getElementById('addSection').classList.remove('hidden');
+                document.getElementById('addTab').classList.add('text-blue-600', 'border-blue-600');
+            } else if (tabName === 'analytics') {
+                document.getElementById('analyticsSection').classList.remove('hidden');
+                document.getElementById('analyticsTab').classList.add('text-blue-600', 'border-blue-600');
+                updateAnalytics();
+            } else if (tabName === 'sell') {
+                document.getElementById('sellSection').classList.remove('hidden');
+                document.getElementById('sellTab').classList.add('text-blue-600', 'border-blue-600');
+            } else if (tabName === 'reports') {
+                document.getElementById('reportsSection').classList.remove('hidden');
+                document.getElementById('reportsTab').classList.add('text-blue-600', 'border-blue-600');
+            } else if (tabName === 'backup') {
+                document.getElementById('backupSection').classList.remove('hidden');
+                document.getElementById('backupTab').classList.add('text-blue-600', 'border-blue-600');
+            }
+        }
+
+        // Generate SKU automatically or allow custom input
+        function generateSKU() {
+            const name = document.getElementById('productName').value;
+            const size = document.getElementById('productSize').value;
+            const color = document.getElementById('productColor').value;
+            
+            if (name && size && color) {
+                // Take first 2 characters of each word in product name
+                const nameWords = name.split(' ');
+                let nameAbbr = '';
+                if (nameWords.length >= 2) {
+                    nameAbbr = nameWords[0].substring(0, 1).toUpperCase() + nameWords[1].substring(0, 1).toUpperCase();
+                } else {
+                    nameAbbr = name.substring(0, 2).toUpperCase();
+                }
+                
+                const sizeAbbr = size.replace(/[^0-9]/g, ''); // Extract numbers only
+                const colorAbbr = color.toLowerCase().substring(0, 2);
+                
+                document.getElementById('productSKU').value = `${nameAbbr}${sizeAbbr}${colorAbbr}`;
+            }
+        }
+
+        // Setup auto-focus functionality
+        function setupAutoFocus() {
+            const inputs = ['productName', 'productSize', 'productColor', 'productQuantity', 'productPrice', 'productSKU'];
+            
+            inputs.forEach((inputId, index) => {
+                const input = document.getElementById(inputId);
+                
+                input.addEventListener('keydown', function(e) {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        if (index < inputs.length - 1) {
+                            // Move to next input
+                            document.getElementById(inputs[index + 1]).focus();
+                        } else {
+                            // Last input - add product
+                            addProduct();
+                        }
+                    }
+                });
+            });
+        }
+
+        // Auto-suggest functionality
+        function showSuggestions() {
+            const input = document.getElementById('productName');
+            const suggestions = document.getElementById('suggestions');
+            const query = input.value.toLowerCase();
+
+            if (query.length < 2) {
+                suggestions.classList.add('hidden');
+                return;
+            }
+
+            const uniqueNames = [...new Set(products.map(p => p.name))];
+            const matches = uniqueNames.filter(name => 
+                name.toLowerCase().includes(query)
+            ).slice(0, 5);
+
+            if (matches.length > 0) {
+                suggestions.innerHTML = matches.map(name => 
+                    `<div class="suggestion-item px-3 py-2 cursor-pointer" onclick="selectSuggestion('${name}')">${name}</div>`
+                ).join('');
+                suggestions.classList.remove('hidden');
+            } else {
+                suggestions.classList.add('hidden');
+            }
+        }
+
+        function selectSuggestion(name) {
+            document.getElementById('productName').value = name;
+            document.getElementById('suggestions').classList.add('hidden');
+            generateSKU();
+        }
+
+        function hideSuggestions(event) {
+            if (!event.target.closest('#productName') && !event.target.closest('#suggestions')) {
+                document.getElementById('suggestions').classList.add('hidden');
+            }
+        }
+
+        // Sell product search functionality
+        function showSellSuggestions() {
+            const input = document.getElementById('sellProductSearch');
+            const suggestions = document.getElementById('sellSuggestions');
+            const query = input.value.toLowerCase();
+
+            if (query.length < 1) {
+                suggestions.classList.add('hidden');
+                return;
+            }
+
+            const availableProducts = products.filter(p => p.quantity > 0);
+            const matches = availableProducts.filter(product => 
+                product.sku.toLowerCase().includes(query) || 
+                product.name.toLowerCase().includes(query)
+            ).slice(0, 8);
+
+            if (matches.length > 0) {
+                suggestions.innerHTML = matches.map(product => 
+                    `<div class="suggestion-item px-3 py-2 cursor-pointer border-b" onclick="selectSellProduct('${product.sku}')">
+                        <div class="font-medium">${product.sku} - ${product.name}</div>
+                        <div class="text-sm text-gray-600">${product.size}, ${product.color} - Stock: ${product.quantity}</div>
+                    </div>`
+                ).join('');
+                suggestions.classList.remove('hidden');
+            } else {
+                suggestions.classList.add('hidden');
+            }
+        }
+
+        function selectSellProduct(sku) {
+            const product = products.find(p => p.sku === sku);
+            if (product) {
+                document.getElementById('sellProductSearch').value = `${product.sku} - ${product.name}`;
+                document.getElementById('sellProductSearch').dataset.selectedSku = sku;
+            }
+            document.getElementById('sellSuggestions').classList.add('hidden');
+        }
+
+        function hideSellSuggestions(event) {
+            if (!event.target.closest('#sellProductSearch') && !event.target.closest('#sellSuggestions')) {
+                document.getElementById('sellSuggestions').classList.add('hidden');
+            }
+        }
+
+        // Add product
+        function addProduct() {
+            const name = document.getElementById('productName').value;
+            const size = document.getElementById('productSize').value;
+            const color = document.getElementById('productColor').value;
+            const quantity = parseInt(document.getElementById('productQuantity').value);
+            const price = parseFloat(document.getElementById('productPrice').value);
+            const sku = document.getElementById('productSKU').value;
+
+            if (!name || !size || !color || !quantity || !price || !sku) {
+                alert('Please fill in all fields');
+                return;
+            }
+
+            // Check if SKU already exists
+            if (products.find(p => p.sku === sku)) {
+                alert('SKU already exists. Please modify the SKU.');
+                return;
+            }
+
+            const product = {
+                sku,
+                name,
+                size,
+                color,
+                quantity,
+                price,
+                totalSold: 0,
+                dateAdded: new Date().toISOString()
+            };
+
+            products.push(product);
+            saveData();
+            syncData();
+            updateProductList();
+            
+            // Clear form and focus on first input
+            document.getElementById('productForm').reset();
+            document.getElementById('productSKU').value = '';
+            document.getElementById('productName').focus();
+            
+            alert('Product added successfully!');
+        }
+
+        // Update product list display
+        function updateProductList() {
+            const tbody = document.getElementById('productList');
+            tbody.innerHTML = products.map(product => `
+                <tr class="hover:bg-gray-50">
+                    <td class="border border-gray-300 px-4 py-2 font-mono text-sm">${product.sku}</td>
+                    <td class="border border-gray-300 px-4 py-2">${product.name}</td>
+                    <td class="border border-gray-300 px-4 py-2">${product.size}</td>
+                    <td class="border border-gray-300 px-4 py-2">${product.color}</td>
+                    <td class="border border-gray-300 px-4 py-2 ${product.quantity < 10 ? 'text-red-600 font-bold' : ''}">${product.quantity}</td>
+                    <td class="border border-gray-300 px-4 py-2">₹${product.price.toFixed(2)}</td>
+                    <td class="border border-gray-300 px-4 py-2">${product.totalSold}</td>
+                </tr>
+            `).join('');
+        }
+
+        // Sell product
+        function sellProduct() {
+            const searchInput = document.getElementById('sellProductSearch');
+            const sku = searchInput.dataset.selectedSku || searchInput.value.split(' - ')[0];
+            const quantity = parseInt(document.getElementById('sellQuantity').value);
+
+            if (!sku || !quantity) {
+                alert('Please select a product and enter quantity');
+                return;
+            }
+
+            const product = products.find(p => p.sku === sku);
+            if (!product) {
+                alert('Product not found');
+                return;
+            }
+
+            if (quantity > product.quantity) {
+                alert(`Not enough stock. Available: ${product.quantity}`);
+                return;
+            }
+
+            // Process sale
+            product.quantity -= quantity;
+            product.totalSold += quantity;
+
+            const sale = {
+                id: Date.now(),
+                sku: product.sku,
+                productName: product.name,
+                size: product.size,
+                color: product.color,
+                quantity,
+                price: product.price,
+                total: quantity * product.price,
+                date: new Date().toISOString()
+            };
+
+            sales.push(sale);
+            saveData();
+            syncData();
+            updateProductList();
+            updateSalesHistory();
+
+            // Show sale summary
+            const summary = document.getElementById('saleSummary');
+            const details = document.getElementById('saleDetails');
+            details.innerHTML = `
+                <p><strong>Product:</strong> ${product.name} (${product.size}, ${product.color})</p>
+                <p><strong>Quantity Sold:</strong> ${quantity}</p>
+                <p><strong>Revenue:</strong> ₹${sale.total.toFixed(2)}</p>
+                <p><strong>Remaining Stock:</strong> ${product.quantity}</p>
+            `;
+            summary.classList.remove('hidden');
+
+            // Clear form
+            document.getElementById('sellProductSearch').value = '';
+            document.getElementById('sellProductSearch').dataset.selectedSku = '';
+            document.getElementById('sellQuantity').value = '';
+
+            setTimeout(() => {
+                summary.classList.add('hidden');
+            }, 5000);
+        }
+
+        // Update sales history
+        function updateSalesHistory() {
+            const tbody = document.getElementById('salesHistory');
+            const recentSales = sales.slice(-10).reverse();
+            
+            tbody.innerHTML = recentSales.map(sale => `
+                <tr class="hover:bg-gray-50">
+                    <td class="border border-gray-300 px-4 py-2">${new Date(sale.date).toLocaleDateString()}</td>
+                    <td class="border border-gray-300 px-4 py-2">${sale.productName}</td>
+                    <td class="border border-gray-300 px-4 py-2">${sale.quantity}</td>
+                    <td class="border border-gray-300 px-4 py-2 text-green-600 font-bold">₹${sale.total.toFixed(2)}</td>
+                </tr>
+            `).join('');
+        }
+
+        // Update analytics
+        function updateAnalytics() {
+            updateTopSelling();
+            updateLeastSelling();
+            updateLowStock();
+            updateRevenueInsights();
+        }
+
+        function updateTopSelling() {
+            const sorted = [...products].sort((a, b) => b.totalSold - a.totalSold).slice(0, 10);
+            const container = document.getElementById('topSelling');
+            
+            if (sorted.length === 0) {
+                container.innerHTML = '<p class="text-gray-500">No sales data available</p>';
+                return;
+            }
+
+            const maxSold = Math.max(...sorted.map(p => p.totalSold));
+            
+            container.innerHTML = sorted.map((product, index) => {
+                const percentage = maxSold > 0 ? (product.totalSold / maxSold) * 100 : 0;
+                return `
+                    <div class="flex items-center justify-between p-2 border-b">
+                        <div class="flex-1">
+                            <div class="flex justify-between items-center mb-1">
+                                <span class="font-medium">${index + 1}. ${product.name}</span>
+                                <span class="text-sm text-gray-600">${product.totalSold} sold</span>
+                            </div>
+                            <div class="w-full bg-gray-200 rounded-full h-2">
+                                <div class="chart-bar bg-green-500 h-2 rounded-full" style="width: ${percentage}%"></div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function updateLeastSelling() {
+            const sorted = [...products].sort((a, b) => a.totalSold - b.totalSold).slice(0, 10);
+            const container = document.getElementById('leastSelling');
+            
+            container.innerHTML = sorted.map((product, index) => `
+                <div class="flex justify-between items-center p-2 border-b">
+                    <span class="font-medium">${index + 1}. ${product.name}</span>
+                    <span class="text-sm text-gray-600">${product.totalSold} sold</span>
+                </div>
+            `).join('');
+        }
+
+        function updateLowStock() {
+            const lowStockProducts = products.filter(p => p.quantity < 10).sort((a, b) => a.quantity - b.quantity);
+            const container = document.getElementById('lowStock');
+            
+            if (lowStockProducts.length === 0) {
+                container.innerHTML = '<p class="text-green-600">✅ All products are well stocked!</p>';
+                return;
+            }
+
+            container.innerHTML = lowStockProducts.map(product => `
+                <div class="flex justify-between items-center p-2 border-b ${product.quantity === 0 ? 'bg-red-50' : 'bg-yellow-50'}">
+                    <span class="font-medium">${product.name} (${product.size})</span>
+                    <span class="text-sm font-bold ${product.quantity === 0 ? 'text-red-600' : 'text-yellow-600'}">
+                        ${product.quantity === 0 ? 'OUT OF STOCK' : `${product.quantity} left`}
+                    </span>
+                </div>
+            `).join('');
+        }
+
+        function updateRevenueInsights() {
+            const totalRevenue = sales.reduce((sum, sale) => sum + sale.total, 0);
+            const totalProducts = products.length;
+            const totalSales = sales.reduce((sum, sale) => sum + sale.quantity, 0);
+            const avgOrderValue = sales.length > 0 ? totalRevenue / sales.length : 0;
+
+            const container = document.getElementById('revenueInsights');
+            container.innerHTML = `
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="bg-green-50 p-4 rounded-lg">
+                        <h4 class="font-bold text-green-800">Total Revenue</h4>
+                        <p class="text-2xl font-bold text-green-600">₹${totalRevenue.toFixed(2)}</p>
+                    </div>
+                    <div class="bg-blue-50 p-4 rounded-lg">
+                        <h4 class="font-bold text-blue-800">Total Products</h4>
+                        <p class="text-2xl font-bold text-blue-600">${totalProducts}</p>
+                    </div>
+                    <div class="bg-purple-50 p-4 rounded-lg">
+                        <h4 class="font-bold text-purple-800">Items Sold</h4>
+                        <p class="text-2xl font-bold text-purple-600">${totalSales}</p>
+                    </div>
+                    <div class="bg-orange-50 p-4 rounded-lg">
+                        <h4 class="font-bold text-orange-800">Avg Order Value</h4>
+                        <p class="text-2xl font-bold text-orange-600">₹${avgOrderValue.toFixed(2)}</p>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Sales Reports
+        function generateReport() {
+            const reportType = document.getElementById('reportType').value;
+            let startDate, endDate;
+
+            const now = new Date();
+            
+            switch(reportType) {
+                case 'today':
+                    startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+                    endDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+                    break;
+                case 'week':
+                    const weekStart = new Date(now);
+                    weekStart.setDate(now.getDate() - now.getDay());
+                    startDate = new Date(weekStart.getFullYear(), weekStart.getMonth(), weekStart.getDate());
+                    endDate = new Date(startDate);
+                    endDate.setDate(startDate.getDate() + 7);
+                    break;
+                case 'month':
+                    startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+                    endDate = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+                    break;
+                case 'year':
+                    startDate = new Date(now.getFullYear(), 0, 1);
+                    endDate = new Date(now.getFullYear() + 1, 0, 1);
+                    break;
+                case 'custom':
+                    const fromDate = document.getElementById('fromDate').value;
+                    const toDate = document.getElementById('toDate').value;
+                    if (!fromDate || !toDate) {
+                        alert('Please select both from and to dates');
+                        return;
+                    }
+                    startDate = new Date(fromDate);
+                    endDate = new Date(toDate);
+                    endDate.setDate(endDate.getDate() + 1);
+                    break;
+            }
+
+            // Filter sales by date range
+            const filteredSales = sales.filter(sale => {
+                const saleDate = new Date(sale.date);
+                return saleDate >= startDate && saleDate < endDate;
+            });
+
+            // Group sales by product
+            const productSales = {};
+            filteredSales.forEach(sale => {
+                if (!productSales[sale.sku]) {
+                    productSales[sale.sku] = {
+                        sku: sale.sku,
+                        productName: sale.productName,
+                        size: sale.size,
+                        color: sale.color,
+                        totalQuantity: 0,
+                        salesCount: 0,
+                        revenue: 0
+                    };
+                }
+                productSales[sale.sku].totalQuantity += sale.quantity;
+                productSales[sale.sku].salesCount += 1;
+                productSales[sale.sku].revenue += sale.total;
+            });
+
+            currentReportData = Object.values(productSales);
+
+            // Update summary
+            const totalSales = filteredSales.length;
+            const totalRevenue = filteredSales.reduce((sum, sale) => sum + sale.total, 0);
+            const totalItems = filteredSales.reduce((sum, sale) => sum + sale.quantity, 0);
+            const avgOrder = totalSales > 0 ? totalRevenue / totalSales : 0;
+
+            document.getElementById('reportTotalSales').textContent = totalSales;
+            document.getElementById('reportRevenue').textContent = `₹${totalRevenue.toFixed(2)}`;
+            document.getElementById('reportItemsSold').textContent = totalItems;
+            document.getElementById('reportAvgOrder').textContent = `₹${avgOrder.toFixed(2)}`;
+
+            // Update table
+            const tbody = document.getElementById('reportTableBody');
+            tbody.innerHTML = currentReportData.map(item => `
+                <tr class="hover:bg-gray-50">
+                    <td class="border border-gray-300 px-4 py-2 font-mono text-sm">${item.sku}</td>
+                    <td class="border border-gray-300 px-4 py-2">${item.productName}</td>
+                    <td class="border border-gray-300 px-4 py-2">${item.size}</td>
+                    <td class="border border-gray-300 px-4 py-2">${item.color}</td>
+                    <td class="border border-gray-300 px-4 py-2 font-bold text-blue-600">${item.totalQuantity}</td>
+                    <td class="border border-gray-300 px-4 py-2">${item.salesCount}</td>
+                </tr>
+            `).join('');
+
+            document.getElementById('reportSummary').classList.remove('hidden');
+            document.getElementById('reportTable').classList.remove('hidden');
+        }
+
+        function downloadReport() {
+            if (currentReportData.length === 0) {
+                alert('Please generate a report first');
+                return;
+            }
+
+            const reportType = document.getElementById('reportType').value;
+            const date = new Date().toISOString().split('T')[0];
+            
+            // Create CSV content
+            const headers = ['SKU', 'Product Name', 'Size', 'Color', 'Total Quantity', 'Sales Count'];
+            const csvContent = [
+                headers.join(','),
+                ...currentReportData.map(item => [
+                    item.sku,
+                    `"${item.productName}"`,
+                    item.size,
+                    item.color,
+                    item.totalQuantity,
+                    item.salesCount
+                ].join(','))
+            ].join('\n');
+
+            // Download CSV
+            const blob = new Blob([csvContent], { type: 'text/csv' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `sales-report-${reportType}-${date}.csv`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+
+            alert('Sales report downloaded successfully!');
+        }
+
+        // Google Sheets Integration
+        function saveScriptUrl() {
+            const url = document.getElementById('scriptUrl').value;
+            if (url) {
+                scriptUrl = url;
+                localStorage.setItem('stockManager_scriptUrl', url);
+                alert('Google Apps Script URL saved successfully!');
+            }
+        }
+
+        function testConnection() {
+            if (!scriptUrl) {
+                alert('Please enter and save the Google Apps Script URL first');
+                return;
+            }
+
+            updateSyncStatus('🔄 Testing...', 'bg-yellow-100 text-yellow-800');
+            
+            fetch(scriptUrl + '?action=test')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        updateSyncStatus('✅ Connected', 'bg-green-100 text-green-800');
+                        alert('Connection successful!');
+                    } else {
+                        throw new Error('Connection failed');
+                    }
+                })
+                .catch(error => {
+                    updateSyncStatus('❌ Error', 'bg-red-100 text-red-800');
+                    alert('Connection failed. Please check your URL and try again.');
+                });
+        }
+
+        function syncData() {
+            if (!scriptUrl) {
+                return;
+            }
+
+            updateSyncStatus('🔄 Syncing...', 'bg-yellow-100 text-yellow-800');
+
+            const data = {
+                products: products,
+                sales: sales,
+                colorChart: colorChart,
+                timestamp: new Date().toISOString()
+            };
+
+            fetch(scriptUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    action: 'sync',
+                    data: data
+                })
+            })
+            .then(response => response.json())
+            .then(result => {
+                if (result.success) {
+                    updateSyncStatus('✅ Synced', 'bg-green-100 text-green-800');
+                    
+                    // Update local data with server data if newer
+                    if (result.data && result.data.timestamp > localStorage.getItem('stockManager_lastSync')) {
+                        products = result.data.products || products;
+                        sales = result.data.sales || sales;
+                        colorChart = result.data.colorChart || colorChart;
+                        saveData();
+                        updateProductList();
+                        updateAnalytics();
+                        updateSalesHistory();
+                        updateColorChart();
+                        localStorage.setItem('stockManager_lastSync', result.data.timestamp);
+                    }
+                } else {
+                    throw new Error('Sync failed');
+                }
+            })
+            .catch(error => {
+                updateSyncStatus('❌ Sync Error', 'bg-red-100 text-red-800');
+                console.error('Sync error:', error);
+            });
+        }
+
+        function updateSyncStatus(text, className) {
+            const status = document.getElementById('syncStatus');
+            status.textContent = text;
+            status.className = `ml-4 px-3 py-1 rounded-full text-sm font-medium ${className}`;
+        }
+
+        function showSetupInstructions() {
+            const scriptCode = `function doGet(e) {
+  const action = e.parameter.action;
+  
+  if (action === 'test') {
+    return ContentService.createTextOutput(JSON.stringify({success: true}))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+  
+  return ContentService.createTextOutput(JSON.stringify({success: false}))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+function doPost(e) {
+  try {
+    const data = JSON.parse(e.postData.contents);
+    const action = data.action;
+    
+    if (action === 'sync') {
+      const ss = SpreadsheetApp.getActiveSpreadsheet();
+      
+      // Update Products sheet
+      const productsSheet = ss.getSheetByName('Products') || ss.insertSheet('Products');
+      productsSheet.clear();
+      productsSheet.getRange(1, 1, 1, 8).setValues([['SKU', 'Name', 'Size', 'Color', 'Quantity', 'Price', 'Total Sold', 'Date Added']]);
+      
+      if (data.data.products && data.data.products.length > 0) {
+        const productRows = data.data.products.map(p => [p.sku, p.name, p.size, p.color, p.quantity, p.price, p.totalSold, p.dateAdded]);
+        productsSheet.getRange(2, 1, productRows.length, 8).setValues(productRows);
+      }
+      
+      // Update Sales sheet
+      const salesSheet = ss.getSheetByName('Sales') || ss.insertSheet('Sales');
+      salesSheet.clear();
+      salesSheet.getRange(1, 1, 1, 8).setValues([['ID', 'SKU', 'Product Name', 'Size', 'Color', 'Quantity', 'Total', 'Date']]);
+      
+      if (data.data.sales && data.data.sales.length > 0) {
+        const salesRows = data.data.sales.map(s => [s.id, s.sku, s.productName, s.size, s.color, s.quantity, s.total, s.date]);
+        salesSheet.getRange(2, 1, salesRows.length, 8).setValues(salesRows);
+      }
+      
+      // Store timestamp
+      const metaSheet = ss.getSheetByName('Meta') || ss.insertSheet('Meta');
+      metaSheet.getRange(1, 1).setValue('Last Updated');
+      metaSheet.getRange(1, 2).setValue(data.data.timestamp);
+      
+      return ContentService.createTextOutput(JSON.stringify({
+        success: true,
+        data: {
+          products: data.data.products,
+          sales: data.data.sales,
+          colorChart: data.data.colorChart,
+          timestamp: data.data.timestamp
+        }
+      })).setMimeType(ContentService.MimeType.JSON);
+    }
+    
+    return ContentService.createTextOutput(JSON.stringify({success: false}))
+      .setMimeType(ContentService.MimeType.JSON);
+      
+  } catch (error) {
+    return ContentService.createTextOutput(JSON.stringify({success: false, error: error.toString()}))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+}`;
+
+            document.getElementById('scriptCode').value = scriptCode;
+            document.getElementById('setupModal').classList.remove('hidden');
+        }
+
+        function hideSetupInstructions() {
+            document.getElementById('setupModal').classList.add('hidden');
+        }
+
+        // Data backup and restore
+        function exportData() {
+            const data = {
+                products,
+                sales,
+                colorChart,
+                exportDate: new Date().toISOString(),
+                version: '2.0'
+            };
+
+            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `stock-manager-backup-${new Date().toISOString().split('T')[0]}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+
+            alert('Backup downloaded successfully!');
+        }
+
+        function importData() {
+            const fileInput = document.getElementById('importFile');
+            const file = fileInput.files[0];
+
+            if (!file) {
+                alert('Please select a backup file');
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = JSON.parse(e.target.result);
+                    
+                    if (data.products && data.sales) {
+                        if (confirm('This will replace all current data. Are you sure?')) {
+                            products = data.products;
+                            sales = data.sales;
+                            if (data.colorChart) {
+                                colorChart = data.colorChart;
+                            }
+                            saveData();
+                            syncData();
+                            updateProductList();
+                            updateAnalytics();
+                            updateSalesHistory();
+                            updateColorChart();
+                            alert('Data restored successfully!');
+                            fileInput.value = '';
+                        }
+                    } else {
+                        alert('Invalid backup file format');
+                    }
+                } catch (error) {
+                    alert('Error reading backup file');
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        // Color Chart Functions
+        function updateColorChart() {
+            const container = document.getElementById('colorChart');
+            container.innerHTML = colorChart.map(color => `
+                <div class="bg-white rounded-lg p-3 border hover:shadow-md transition-shadow cursor-pointer" onclick="selectColor('${color.abbr}')">
+                    <div class="w-full h-8 rounded-md border-2 border-gray-300 mb-2" style="background-color: ${color.color}"></div>
+                    <div class="text-center">
+                        <div class="font-medium text-sm text-gray-800">${color.name}</div>
+                        <div class="text-xs text-gray-500 font-mono">${color.abbr}</div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function selectColor(abbr) {
+            document.getElementById('productColor').value = abbr;
+            generateSKU();
+        }
+
+        function showAddColorForm() {
+            document.getElementById('addColorForm').classList.remove('hidden');
+            document.getElementById('newColorName').focus();
+        }
+
+        function hideAddColorForm() {
+            document.getElementById('addColorForm').classList.add('hidden');
+            document.getElementById('newColorName').value = '';
+            document.getElementById('newColorAbbr').value = '';
+        }
+
+        function addNewColor() {
+            const name = document.getElementById('newColorName').value.trim();
+            const abbr = document.getElementById('newColorAbbr').value.trim().toLowerCase();
+
+            if (!name || !abbr) {
+                alert('Please enter both color name and abbreviation');
+                return;
+            }
+
+            if (abbr.length !== 2) {
+                alert('Abbreviation must be exactly 2 characters');
+                return;
+            }
+
+            if (colorChart.find(c => c.abbr === abbr)) {
+                alert('This abbreviation already exists');
+                return;
+            }
+
+            // Generate a random color
+            const colors = ['#ef4444', '#f97316', '#f59e0b', '#eab308', '#84cc16', '#22c55e', '#10b981', '#14b8a6', '#06b6d4', '#0ea5e9', '#3b82f6', '#6366f1', '#8b5cf6', '#a855f7', '#d946ef', '#ec4899', '#f43f5e'];
+            const randomColor = colors[Math.floor(Math.random() * colors.length)];
+
+            const newColor = {
+                name: name,
+                abbr: abbr,
+                color: randomColor
+            };
+
+            colorChart.push(newColor);
+            saveColorData();
+            updateColorChart();
+            hideAddColorForm();
+            alert('Color added successfully!');
+        }
+
+        function saveColorData() {
+            localStorage.setItem('stockManager_colors', JSON.stringify(colorChart));
+        }
+
+        // Save data to localStorage
+        function saveData() {
+            localStorage.setItem('stockManager_products', JSON.stringify(products));
+            localStorage.setItem('stockManager_sales', JSON.stringify(sales));
+        }
+    </script>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9792ee0792733f90',t:'MTc1Njg3ODIwOS4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>
