@@ -1,0 +1,4106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta 
+
+charset="UTF-8">
+    <meta name="viewport" 
+
+content="width=device-width, initial-scale=1.0">
+    <title>Stock 
+
+Manager Pro - Multi-Device Sync</title>
+    <script 
+
+src="https://cdn.tailwindcss.com"></script>
+    <!-- Firebase App 
+
+(core Firebase SDK) -->
+    <script 
+
+src="https://www.gstatic.com/firebasejs/8.10.1/firebase-
+
+app.js"></script>
+    <!-- Firebase Firestore -->
+    <script 
+
+src="https://www.gstatic.com/firebasejs/8.10.1/firebase-
+
+firestore.js"></script>
+    <!-- Firebase Auth -->
+    <script 
+
+src="https://www.gstatic.com/firebasejs/8.10.1/firebase-
+
+auth.js"></script>
+    <style>
+        .chart-bar {
+            transition: 
+
+width 0.3s ease;
+        }
+        .suggestion-item:hover {
+            
+
+background-color: #f3f4f6;
+        }
+        #suggestions {
+            
+
+max-height: 200px;
+            overflow-y: auto;
+            z-index: 
+
+1000;
+        }
+        .fade-in {
+            animation: fadeIn 0.3s 
+
+ease-in;
+        }
+        @keyframes fadeIn {
+            from { 
+
+opacity: 0; transform: translateY(-10px); }
+            to { opacity: 
+
+1; transform: translateY(0); }
+        }
+        .login-container {
+         
+
+   background: linear-gradient(135deg, #667eea 0%, #764ba2 
+
+100%);
+            min-height: 100vh;
+        }
+        .firebase-setup {
+   
+
+         background: linear-gradient(135deg, #f6d365 0%, 
+
+#fda085 100%);
+        }
+        .tab-button {
+            transition: all 
+
+0.2s ease;
+        }
+        .tab-button.active {
+            background-
+
+color: #3b82f6;
+            color: white;
+        }
+    </style>
+</head>
+<body class="bg-gray-100">
+    <!-- Login Screen -->
+    <div 
+
+id="loginScreen" class="login-container flex items-center 
+
+justify-center">
+        <div class="bg-white rounded-lg shadow-
+
+2xl p-8 w-full max-w-md">
+            <div class="text-center 
+
+mb-8">
+                <h1 class="text-3xl font-bold text-gray-800 
+
+mb-2">📦 Stock Manager Pro</h1>
+                <p class="text-
+
+gray-600">Multi-Device Inventory System</p>
+            </div>
+      
+
+      
+            <form id="loginForm" class="space-y-6">
+                
+
+<div>
+                    <label class="block text-sm font-medium 
+
+text-gray-700 mb-2">Email</label>
+                    <input 
+
+type="email" id="email" class="w-full px-4 py-3 border 
+
+border-gray-300 rounded-lg focus:outline-none focus:ring-2 
+
+focus:ring-blue-500" placeholder="Enter email" required>
+          
+
+      </div>
+                <div>
+                    <label class="block 
+
+text-sm font-medium text-gray-700 mb-2">Password</label>
+    
+
+                <input type="password" id="password" class="w-full 
+
+px-4 py-3 border border-gray-300 rounded-lg focus:outline-
+
+none focus:ring-2 focus:ring-blue-500" placeholder="Enter 
+
+password" required>
+                </div>
+                <button 
+
+type="submit" class="w-full bg-blue-600 hover:bg-blue-700 
+
+text-white py-3 rounded-lg font-medium transition-colors">
+       
+
+             Login / Register
+                </button>
+            </form>
+    
+
+        
+            <div class="mt-6 p-4 bg-blue-50 rounded-lg">
+       
+
+         <p class="text-sm text-blue-800"><strong>Note:</strong> 
+
+This will create an account automatically if it doesn't exist</p>
+  
+
+          </div>
+        </div>
+    </div>
+
+    <!-- Main Application -->
+    
+
+<div id="mainApp" class="hidden">
+        <!-- Header -->
+        
+
+<header class="bg-white shadow-lg">
+            <div class="max-
+
+w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div 
+
+class="flex justify-between items-center py-6">
+                    
+
+<div class="flex items-center">
+                        <h1 
+
+class="text-3xl font-bold text-gray-900">📦 Stock Manager 
+
+Pro</h1>
+                        <div id="syncStatus" class="ml-4 px-3 
+
+py-1 rounded-full text-sm font-medium bg-green-100 text-
+
+green-800">
+                            ✅ Synced
+                        </div>
+   
+
+                 </div>
+                    <div class="flex items-center 
+
+space-x-4">
+                        <span class="text-sm text-gray-
+
+600" id="userEmail"></span>
+                        <button 
+
+onclick="syncData()" class="bg-blue-600 hover:bg-blue-700 
+
+text-white px-4 py-2 rounded-md font-medium transition-
+
+colors">
+                            🔄 Sync Now
+                        
+
+</button>
+                        <button onclick="logout()" class="bg-
+
+red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md 
+
+font-medium transition-colors">
+                            Logout
+          
+
+              </button>
+                    </div>
+                </div>
+            
+
+</div>
+        </header>
+
+        <!-- Navigation Tabs -->
+        <div 
+
+class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-6">
+            
+
+<div class="flex space-x-1 bg-gray-200 p-1 rounded-lg">
+           
+
+     <button onclick="showTab('inventory')" id="tabInventory" 
+
+class="tab-button active flex-1 py-2 px-4 rounded-md text-
+
+center font-medium">Inventory</button>
+                <button 
+
+onclick="showTab('sell')" id="tabSell" class="tab-button flex-1 
+
+py-2 px-4 rounded-md text-center font-medium">Sell 
+
+Products</button>
+                <button onclick="showTab
+
+('sales')" id="tabSales" class="tab-button flex-1 py-2 px-4 
+
+rounded-md text-center font-medium">Sales History</button>
+   
+
+             <button onclick="showTab('analytics')" 
+
+id="tabAnalytics" class="tab-button flex-1 py-2 px-4 
+
+rounded-md text-center font-medium">Analytics</button>
+         
+
+       <button onclick="showTab('colors')" id="tabColors" 
+
+class="tab-button flex-1 py-2 px-4 rounded-md text-center 
+
+font-medium">Colors</button>
+                <button 
+
+onclick="showTab('backup')" id="tabBackup" class="tab-button 
+
+flex-1 py-2 px-4 rounded-md text-center font-
+
+medium">Backup</button>
+            </div>
+        </div>
+
+        <!-- 
+
+Main Content Area -->
+        <main class="max-w-7xl mx-auto 
+
+px-4 sm:px-6 lg:px-8 py-6">
+            <!-- Inventory Tab -->
+         
+
+   <div id="tabContentInventory" class="tab-content">
+                
+
+<div class="bg-white rounded-lg shadow-lg p-6 mb-6">
+               
+
+     <h2 class="text-2xl font-bold text-gray-800 mb-6">➕ Add 
+
+New Product</h2>
+                    <form id="addProductForm" 
+
+class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      
+
+                  <div>
+                            <label class="block text-sm 
+
+font-medium text-gray-700 mb-2">Product Name</label>
+          
+
+                  <input type="text" id="productName" class="w-full 
+
+px-3 py-2 border border-gray-300 rounded-md 
+
+focus:outline-none focus:ring-2 focus:ring-blue-500" 
+
+placeholder="Product name" required>
+                        </div>
+      
+
+                  <div>
+                            <label class="block text-sm 
+
+font-medium text-gray-700 mb-2">Size</label>
+                        
+
+    <input type="text" id="productSize" class="w-full px-3 py-2 
+
+border border-gray-300 rounded-md focus:outline-none 
+
+focus:ring-2 focus:ring-blue-500" placeholder="Size (e.g., S, 
+
+M, L)" required>
+                        </div>
+                        <div>
+        
+
+                    <label class="block text-sm font-medium text-
+
+gray-700 mb-2">Color</label>
+                            <select 
+
+id="productColor" class="w-full px-3 py-2 border border-
+
+gray-300 rounded-md focus:outline-none focus:ring-2 
+
+focus:ring-blue-500" required>
+                                <option 
+
+value="">Select Color</option>
+                            </select>
+         
+
+               </div>
+                        <div>
+                            <label 
+
+class="block text-sm font-medium text-gray-700 mb-
+
+2">Quantity</label>
+                            <input type="number" 
+
+id="productQuantity" class="w-full px-3 py-2 border border-
+
+gray-300 rounded-md focus:outline-none focus:ring-2 
+
+focus:ring-blue-500" placeholder="Quantity" min="1" required>
+  
+
+                      </div>
+                        <div class="md:col-span-
+
+2">
+                            <label class="block text-sm font-medium 
+
+text-gray-700 mb-2">Cost Price ($)</label>
+                            
+
+<input type="number" id="productCost" step="0.01" class="w-
+
+full px-3 py-2 border border-gray-300 rounded-md 
+
+focus:outline-none focus:ring-2 focus:ring-blue-500" 
+
+placeholder="Cost price" min="0" required>
+                        
+
+</div>
+                        <div class="md:col-span-2">
+                      
+
+      <label class="block text-sm font-medium text-gray-700 
+
+mb-2">Selling Price ($)</label>
+                            <input 
+
+type="number" id="productPrice" step="0.01" class="w-full 
+
+px-3 py-2 border border-gray-300 rounded-md 
+
+focus:outline-none focus:ring-2 focus:ring-blue-500" 
+
+placeholder="Selling price" min="0" required>
+                        
+
+</div>
+                        <div class="md:col-span-4 flex justify-
+
+end">
+                            <button type="submit" class="bg-
+
+blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-md 
+
+font-medium transition-colors">Add Product</button>
+                
+
+        </div>
+                    </form>
+                </div>
+
+                <div 
+
+class="bg-white rounded-lg shadow-lg p-6">
+                    <h2 
+
+class="text-2xl font-bold text-gray-800 mb-6">📦 Current 
+
+Inventory</h2>
+                    <div class="overflow-x-auto">
+         
+
+               <table class="min-w-full divide-y divide-gray-200">
+     
+
+                       <thead class="bg-gray-50">
+                               
+
+ <tr>
+                                    <th class="px-6 py-3 text-left 
+
+text-xs font-medium text-gray-500 uppercase tracking-
+
+wider">SKU</th>
+                                    <th class="px-6 py-3 
+
+text-left text-xs font-medium text-gray-500 uppercase 
+
+tracking-wider">Product</th>
+                                    <th 
+
+class="px-6 py-3 text-left text-xs font-medium text-gray-500 
+
+uppercase tracking-wider">Size</th>
+                                    
+
+<th class="px-6 py-3 text-left text-xs font-medium text-
+
+gray-500 uppercase tracking-wider">Color</th>
+                         
+
+           <th class="px-6 py-3 text-left text-xs font-medium 
+
+text-gray-500 uppercase tracking-wider">Quantity</th>
+            
+
+                        <th class="px-6 py-3 text-left text-xs font-
+
+medium text-gray-500 uppercase tracking-wider">Cost</th>
+      
+
+                              <th class="px-6 py-3 text-left text-xs 
+
+font-medium text-gray-500 uppercase tracking-
+
+wider">Price</th>
+                                    <th class="px-6 py-3 
+
+text-left text-xs font-medium text-gray-500 uppercase 
+
+tracking-wider">Actions</th>
+                                </tr>
+             
+
+               </thead>
+                            <tbody id="productList" 
+
+class="bg-white divide-y divide-gray-200">
+                                
+
+<!-- Product list will be populated here -->
+                            
+
+</tbody>
+                        </table>
+                    </div>
+                
+
+</div>
+            </div>
+
+            <!-- Sell Products Tab -->
+            
+
+<div id="tabContentSell" class="tab-content hidden">
+                
+
+<div class="bg-white rounded-lg shadow-lg p-6">
+                    
+
+<h2 class="text-2xl font-bold text-gray-800 mb-6">🛒 Sell 
+
+Products</h2>
+                    <div class="mb-6">
+                        
+
+<label class="block text-sm font-medium text-gray-700 mb-
+
+2">Search Product</label>
+                        <input type="text" 
+
+id="sellProductSearch" class="w-full px-3 py-2 border 
+
+border-gray-300 rounded-md focus:outline-none focus:ring-2 
+
+focus:ring-blue-500" placeholder="Search by name, SKU, size 
+
+or color">
+                        <div id="sellSuggestions" 
+
+class="hidden absolute z-10 mt-1 w-full max-w-md bg-white 
+
+shadow-lg rounded-md border border-gray-200 overflow-
+
+hidden"></div>
+                    </div>
+
+                    <div class="mb-
+
+6">
+                        <h3 class="text-lg font-medium text-gray-
+
+800 mb-4">Selected Products</h3>
+                        <div 
+
+id="selectedProducts" class="space-y-4">
+                            <!-- 
+
+Selected products will appear here -->
+                        </div>
+      
+
+              </div>
+
+                    <div class="grid grid-cols-1 
+
+md:grid-cols-2 gap-6">
+                        <div>
+                            
+
+<h3 class="text-lg font-medium text-gray-800 mb-4">Order 
+
+Summary</h3>
+                            <div class="bg-gray-50 p-4 
+
+rounded-lg">
+                                <div class="flex justify-
+
+between mb-2">
+                                    <span class="text-
+
+gray-600">Subtotal:</span>
+                                    <span 
+
+id="orderSubtotal">$0.00</span>
+                                </div>
+     
+
+                           <div class="flex justify-between mb-4">
+        
+
+                            <span class="text-gray-600">Tax 
+
+(10%):</span>
+                                    <span id="orderTax">
+
+$0.00</span>
+                                </div>
+                                
+
+<div class="flex justify-between font-bold text-lg">
+                  
+
+                  <span>Total:</span>
+                                    <span 
+
+id="orderTotal">$0.00</span>
+                                </div>
+          
+
+                      <button onclick="completeSale()" class="mt-4 
+
+w-full bg-green-600 hover:bg-green-700 text-white py-2 
+
+rounded-md font-medium transition-colors">Complete 
+
+Sale</button>
+                            </div>
+                        </div>
+     
+
+               </div>
+                </div>
+            </div>
+
+            <!-- Sales 
+
+History Tab -->
+            <div id="tabContentSales" class="tab-
+
+content hidden">
+                <div class="bg-white rounded-lg 
+
+shadow-lg p-6">
+                    <h2 class="text-2xl font-bold 
+
+text-gray-800 mb-6">📊 Sales History</h2>
+                    <div 
+
+class="mb-6 flex justify-between items-center">
+                      
+
+  <div>
+                            <select id="salesFilter" class="px-3 
+
+py-2 border border-gray-300 rounded-md focus:outline-none 
+
+focus:ring-2 focus:ring-blue-500">
+                                <option 
+
+value="all">All Sales</option>
+                                <option 
+
+value="today">Today</option>
+                                <option 
+
+value="week">This Week</option>
+                                <option 
+
+value="month">This Month</option>
+                            </select>
+  
+
+                      </div>
+                    </div>
+                    <div 
+
+class="overflow-x-auto">
+                        <table class="min-w-
+
+full divide-y divide-gray-200">
+                            <thead 
+
+class="bg-gray-50">
+                                <tr>
+                           
+
+         <th class="px-6 py-3 text-left text-xs font-medium 
+
+text-gray-500 uppercase tracking-wider">Date</th>
+                  
+
+                  <th class="px-6 py-3 text-left text-xs font-
+
+medium text-gray-500 uppercase tracking-wider">SKU</th>
+      
+
+                              <th class="px-6 py-3 text-left text-xs 
+
+font-medium text-gray-500 uppercase tracking-
+
+wider">Product</th>
+                                    <th class="px-6 
+
+py-3 text-left text-xs font-medium text-gray-500 uppercase 
+
+tracking-wider">Quantity</th>
+                                    <th 
+
+class="px-6 py-3 text-left text-xs font-medium text-gray-500 
+
+uppercase tracking-wider">Price</th>
+                                    
+
+<th class="px-6 py-3 text-left text-xs font-medium text-
+
+gray-500 uppercase tracking-wider">Total</th>
+                        
+
+        </tr>
+                            </thead>
+                            <tbody 
+
+id="salesHistory" class="bg-white divide-y divide-gray-200">
+      
+
+                          <!-- Sales history will be populated here -->
+     
+
+                       </tbody>
+                        </table>
+                    
+
+</div>
+                </div>
+            </div>
+
+            <!-- Analytics Tab 
+
+-->
+            <div id="tabContentAnalytics" class="tab-content 
+
+hidden">
+                <div class="bg-white rounded-lg shadow-lg 
+
+p-6 mb-6">
+                    <h2 class="text-2xl font-bold text-
+
+gray-800 mb-6">📈 Sales Analytics</h2>
+                    <div 
+
+class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                  
+
+      <div class="bg-blue-50 p-4 rounded-lg">
+                            
+
+<h3 class="text-lg font-medium text-blue-800">Total 
+
+Sales</h3>
+                            <p class="text-2xl font-bold" 
+
+id="totalSalesValue">$0.00</p>
+                        </div>
+                
+
+        <div class="bg-green-50 p-4 rounded-lg">
+                         
+
+   <h3 class="text-lg font-medium text-green-800">Total 
+
+Profit</h3>
+                            <p class="text-2xl font-bold" 
+
+id="totalProfitValue">$0.00</p>
+                        </div>
+                
+
+        <div class="bg-purple-50 p-4 rounded-lg">
+                         
+
+   <h3 class="text-lg font-medium text-purple-800">Items 
+
+Sold</h3>
+                            <p class="text-2xl font-bold" 
+
+id="totalItemsValue">0</p>
+                        </div>
+                    
+
+</div>
+
+                    <div class="mb-8">
+                        <h3 
+
+class="text-xl font-medium text-gray-800 mb-4">Top Selling 
+
+Products</h3>
+                        <div id="topProducts" 
+
+class="space-y-2">
+                            <!-- Top products will be 
+
+populated here -->
+                        </div>
+                    </div>
+
+       
+
+             <div>
+                        <h3 class="text-xl font-medium 
+
+text-gray-800 mb-4">Sales Report</h3>
+                        <div 
+
+class="flex space-x-4 mb-4">
+                            <select 
+
+id="reportType" class="px-3 py-2 border border-gray-300 
+
+rounded-md focus:outline-none focus:ring-2 focus:ring-blue-
+
+500">
+                                <option value="daily">Daily</option>
+   
+
+                             <option value="weekly">Weekly</option>
+       
+
+                         <option value="monthly">Monthly</option>
+         
+
+                       <option value="custom">Custom Range</option>
+   
+
+                         </select>
+                            <div 
+
+id="customDateRange" class="hidden flex space-x-2">
+               
+
+                 <input type="date" id="startDate" class="px-3 py-2 
+
+border border-gray-300 rounded-md">
+                                
+
+<span class="self-center">to</span>
+                                <input 
+
+type="date" id="endDate" class="px-3 py-2 border border-
+
+gray-300 rounded-md">
+                            </div>
+                      
+
+      <button onclick="generateReport()" class="bg-blue-600 
+
+hover:bg-blue-700 text-white px-4 py-2 rounded-md font-
+
+medium transition-colors">Generate Report</button>
+                 
+
+       </div>
+                        <div id="reportResults">
+                    
+
+        <!-- Report results will be displayed here -->
+                      
+
+  </div>
+                    </div>
+                </div>
+            </div>
+
+           
+
+ <!-- Colors Tab -->
+            <div id="tabContentColors" 
+
+class="tab-content hidden">
+                <div class="bg-white 
+
+rounded-lg shadow-lg p-6">
+                    <h2 class="text-2xl 
+
+font-bold text-gray-800 mb-6">🎨 Color Management</h2>
+         
+
+           <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+ 
+
+                       <div>
+                            <h3 class="text-lg 
+
+font-medium text-gray-800 mb-4">Add New Color</h3>
+            
+
+                <form id="addColorForm" class="space-y-4">
+            
+
+                    <div>
+                                    <label class="block 
+
+text-sm font-medium text-gray-700 mb-2">Color Name</label>
+ 
+
+                                   <input type="text" id="colorName" 
+
+class="w-full px-3 py-2 border border-gray-300 rounded-md 
+
+focus:outline-none focus:ring-2 focus:ring-blue-500" 
+
+placeholder="Color name" required>
+                                </div>
+  
+
+                              <div>
+                                    <label 
+
+class="block text-sm font-medium text-gray-700 mb-
+
+2">Abbreviation</label>
+                                    <input 
+
+type="text" id="colorAbbr" maxlength="2" class="w-full px-3 
+
+py-2 border border-gray-300 rounded-md focus:outline-none 
+
+focus:ring-2 focus:ring-blue-500" placeholder="2-letter code" 
+
+required>
+                                </div>
+                                <div>
+  
+
+                                  <label class="block text-sm font-
+
+medium text-gray-700 mb-2">Color Code</label>
+                       
+
+             <input type="color" id="colorCode" class="w-full h-10 
+
+px-3 py-2 border border-gray-300 rounded-md 
+
+focus:outline-none focus:ring-2 focus:ring-blue-500" 
+
+value="#000000" required>
+                                </div>
+             
+
+                   <button type="submit" class="bg-blue-600 
+
+hover:bg-blue-700 text-white px-4 py-2 rounded-md font-
+
+medium transition-colors">Add Color</button>
+                           
+
+ </form>
+                        </div>
+                        <div>
+                   
+
+         <h3 class="text-lg font-medium text-gray-800 mb-
+
+4">Current Colors</h3>
+                            <div id="colorChart" 
+
+class="grid grid-cols-2 md:grid-cols-3 gap-4">
+                          
+
+      <!-- Color chart will be populated here -->
+                            
+
+</div>
+                        </div>
+                    </div>
+                </div>
+ 
+
+           </div>
+
+            <!-- Backup Section -->
+            <div 
+
+id="tabContentBackup" class="tab-content hidden">
+                
+
+<div class="bg-white rounded-lg shadow-lg p-6">
+                    
+
+<h2 class="text-2xl font-bold text-gray-800 mb-6">💾 Data 
+
+Management</h2>
+                    
+                    <!-- Firebase 
+
+Setup Instructions -->
+                    <div class="mb-8 p-4 
+
+firebase-setup border border-orange-200 rounded-lg">
+            
+
+            <h3 class="text-lg font-bold text-gray-800 mb-4">🔥 
+
+Firebase Setup</h3>
+                        <p class="text-gray-700 
+
+mb-4">To enable multi-device sync, you need to set up a free 
+
+Firebase project:</p>
+                        <ol class="list-decimal 
+
+list-inside space-y-2 text-sm text-gray-600 mb-4">
+                  
+
+          <li>Go to <a href="https://firebase.google.com/" 
+
+class="text-blue-600 underline" target="_blank">Firebase 
+
+Console</a></li>
+                            <li>Create a new project</li>
+   
+
+                         <li>Enable Firestore Database (in test mode)
+
+</li>
+                            <li>Enable Authentication 
+
+(Email/Password provider)</li>
+                            <li>Copy your 
+
+Firebase config and paste it below</li>
+                        </ol>
+       
+
+                 
+                        <div class="mt-4">
+                          
+
+  <label class="block text-sm font-medium text-gray-700 mb-
+
+2">Firebase Configuration</label>
+                            <textarea 
+
+id="firebaseConfig" class="w-full h-40 px-3 py-2 border 
+
+border-gray-300 rounded-md focus:outline-none focus:ring-2 
+
+focus:ring-blue-500 text-xs font-mono" placeholder='{
+  
+
+"apiKey": "your-api-key",
+  "authDomain": "your-
+
+project.firebaseapp.com",
+  "projectId": "your-project-id",
+  
+
+"storageBucket": "your-project.appspot.com",
+  
+
+"messagingSenderId": "123456789",
+  "appId": "your-app-id"
+}'></textarea>
+                        </div>
+                        <button 
+
+onclick="saveFirebaseConfig()" class="mt-4 bg-blue-600 
+
+hover:bg-blue-700 text-white px-4 py-2 rounded-md font-
+
+medium transition-colors">
+                            Save 
+
+Configuration
+                        </button>
+                        <button 
+
+onclick="testFirebaseConnection()" class="mt-4 ml-2 bg-
+
+green-600 hover:bg-green-700 text-white px-4 py-2 
+
+rounded-md font-medium transition-colors">
+                            
+
+Test Connection
+                        </button>
+                    </div>
+     
+
+               
+                    <div class="grid grid-cols-1 md:grid-
+
+cols-2 gap-8">
+                        <div>
+                            <h3 
+
+class="text-lg font-bold text-gray-700 mb-4">📤 Export 
+
+Data</h3>
+                            <p class="text-gray-600 mb-
+
+4">Download your inventory and sales data as a JSON file for 
+
+backup.</p>
+                            <button onclick="exportData()" 
+
+class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 
+
+rounded-md font-medium transition-colors">Download 
+
+Backup</button>
+                        </div>
+                        
+             
+
+           <div>
+                            <h3 class="text-lg font-bold 
+
+text-gray-700 mb-4">📥 Import Data</h3>
+                            <p 
+
+class="text-gray-600 mb-4">Restore your data from a 
+
+previously exported backup file.</p>
+                            <input 
+
+type="file" id="importFile" accept=".json" class="mb-4 block 
+
+w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 
+
+file:rounded-md file:border-0 file:text-sm file:font-medium 
+
+file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
+        
+
+                    <button onclick="importData()" class="bg-green-
+
+600 hover:bg-green-700 text-white px-6 py-2 rounded-md 
+
+font-medium transition-colors">Restore Backup</button>
+           
+
+             </div>
+                    </div>
+                </div>
+            
+
+</div>
+        </main>
+    </div>
+
+    <script>
+        // Firebase variables
+ 
+
+       let firebaseConfig = {
+            apiKey: 
+
+"AIzaSyB5UUJAM43yitslmMpuX_xAurM8MJ3pQhY",
+            
+
+authDomain: "managerpateldata.firebaseapp.com",
+            
+
+projectId: "managerpateldata",
+            storageBucket: 
+
+"managerpateldata.appspot.com",
+            messagingSenderId: 
+
+"650663675183",
+            appId: 
+
+"1:650663675183:web:889fb749b432e3873ecdda",
+            
+
+measurementId: "G-7ESZZJGN2C"
+        };
+
+        let db = null;
+     
+
+   let auth = null;
+        let currentUser = null;
+        let 
+
+unsubscribeProducts = null;
+        let unsubscribeSales = null;
+      
+
+  let unsubscribeColors = null;
+
+        // Data storage
+        let 
+
+products = JSON.parse(localStorage.getItem
+
+('stockManager_products')) || [];
+        let sales = JSON.parse
+
+(localStorage.getItem('stockManager_sales')) || [];
+        let 
+
+colorChart = JSON.parse(localStorage.getItem
+
+('stockManager_colors')) || [
+            {name: 'Black', abbr: 'bl', 
+
+color: '#000000'},
+            {name: 'White', abbr: 'wh', color: 
+
+'#ffffff'},
+            {name: 'Red', abbr: 'rd', color: 
+
+'#ef4444'},
+            {name: 'Blue', abbr: 'bu', color: 
+
+'#3b82f6'},
+            {name: 'Green', abbr: 'gr', color: 
+
+'#10b981'},
+            {name: 'Yellow', abbr: 'yl', color: 
+
+'#f59e0b'},
+            {name: 'Purple', abbr: 'pr', color: 
+
+'#8b5cf6'},
+            {name: 'Orange', abbr: 'or', color: 
+
+'#f97316'},
+            {name: 'Pink', abbr: 'pk', color: 
+
+'#ec4899'},
+            {name: 'Brown', abbr: 'br', color: 
+
+'#a3a3a3'},
+            {name: 'Gray', abbr: 'gy', color: 
+
+'#6b7280'},
+            {name: 'Navy', abbr: 'nv', color: 
+
+'#1e40af'}
+        ];
+
+        let currentReportData = [];
+        let 
+
+selectedProductsForSale = [];
+        
+        // Initialize the app
+     
+
+   document.addEventListener('DOMContentLoaded', function() 
+
+{
+            // Load Firebase config if available
+            const 
+
+savedConfig = localStorage.getItem
+
+('stockManager_firebaseConfig');
+            if (savedConfig) {
+       
+
+         firebaseConfig = JSON.parse(savedConfig);
+            }
+       
+
+     document.getElementById('firebaseConfig').value = 
+
+JSON.stringify(firebaseConfig, null, 2);
+            
+
+initializeFirebase();
+            
+            // Check if user is logged in
+ 
+
+           if (localStorage.getItem('stockManager_loggedIn') === 
+
+'true') {
+                showMainApp();
+            }
+
+            // Login 
+
+form handler
+            document.getElementById
+
+('loginForm').addEventListener('submit', function(e) {
+                
+
+e.preventDefault();
+                login();
+            });
+
+            // Add 
+
+product form handler
+            document.getElementById
+
+('addProductForm').addEventListener('submit', function(e) {
+     
+
+           e.preventDefault();
+                addProduct();
+            });
+
+   
+
+         // Add color form handler
+            
+
+document.getElementById('addColorForm').addEventListener
+
+('submit', function(e) {
+                e.preventDefault();
+                
+
+addNewColor();
+            });
+
+            // Report type change 
+
+handler
+            document.getElementById
+
+('reportType').addEventListener('change', function() {
+              
+
+  if (this.value === 'custom') {
+                    
+
+document.getElementById
+
+('customDateRange').classList.remove('hidden');
+                } 
+
+else {
+                    document.getElementById
+
+('customDateRange').classList.add('hidden');
+                }
+           
+
+ });
+
+            // Sell product search
+            
+
+document.getElementById
+
+('sellProductSearch').addEventListener('input', 
+
+showSellSuggestions);
+            document.addEventListener
+
+('click', hideSellSuggestions);
+
+            // Sales filter change
+       
+
+     document.getElementById('salesFilter').addEventListener
+
+('change', updateSalesHistory);
+
+            // Initialize UI 
+
+components
+            updateColorDropdown();
+            
+
+updateColorChart();
+            updateProductList();
+            
+
+updateSalesHistory();
+            updateAnalytics();
+        });
+
+        
+
+// Initialize Firebase
+        function initializeFirebase() {
+            
+
+try {
+                // Check if Firebase is already initialized
+           
+
+     if (!firebase.apps.length) {
+                    
+
+firebase.initializeApp(firebaseConfig);
+                }
+                db 
+
+= firebase.firestore();
+                auth = firebase.auth();
+             
+
+   
+                // Set up auth state listener
+                
+
+auth.onAuthStateChanged((user) => {
+                    if (user) {
+      
+
+                  currentUser = user;
+                        
+
+document.getElementById('userEmail').textContent = 
+
+user.email;
+                        setupFirebaseListeners();
+                 
+
+   } else if (localStorage.getItem('stockManager_loggedIn') 
+
+=== 'true') {
+                        // Try to log back in automatically
+ 
+
+                       const email = localStorage.getItem
+
+('stockManager_userEmail');
+                        const password = 
+
+localStorage.getItem('stockManager_userPassword');
+              
+
+          if (email && password) {
+                            
+
+auth.signInWithEmailAndPassword(email, password)
+                  
+
+              .then((userCredential) => {
+                                    
+
+currentUser = userCredential.user;
+                                    
+
+document.getElementById('userEmail').textContent = 
+
+user.email;
+                                    setupFirebaseListeners();
+     
+
+                           })
+                                .catch((error) => {
+      
+
+                              console.error('Auto login failed:', error);
+    
+
+                                logout();
+                                });
+              
+
+          }
+                    }
+                });
+                
+                
+
+return true;
+            } catch (error) {
+                console.error
+
+('Firebase initialization error:', error);
+                
+
+updateSyncStatus('❌ Firebase Error', 'bg-red-100 text-red-
+
+800');
+                return false;
+            }
+        }
+
+        // Set up 
+
+Firebase real-time listeners
+        function 
+
+setupFirebaseListeners() {
+            if (!db || !currentUser) 
+
+return;
+            
+            const userId = currentUser.uid;
+            
+ 
+
+           // Listen for products changes
+            if 
+
+(unsubscribeProducts) unsubscribeProducts();
+            
+
+unsubscribeProducts = db.collection('users').doc
+
+(userId).collection('products')
+                .onSnapshot
+
+((snapshot) => {
+                    let hasChanges = false;
+                  
+
+  snapshot.docChanges().forEach((change) => {
+                        
+
+if (change.type === 'added' || change.type === 'modified') {
+       
+
+                     const data = change.doc.data();
+                           
+
+ const index = products.findIndex(p => p.sku === data.sku);
+        
+
+                    
+                            if (index === -1) {
+                    
+
+            products.push(data);
+                                hasChanges 
+
+= true;
+                            } else {
+                                
+
+products[index] = data;
+                                hasChanges = 
+
+true;
+                            }
+                        } else if (change.type 
+
+=== 'removed') {
+                            products = products.filter(p 
+
+=> p.sku !== change.doc.data().sku);
+                            
+
+hasChanges = true;
+                        }
+                    });
+                 
+
+   
+                    if (hasChanges) {
+                        saveData();
+     
+
+                   updateProductList();
+                        
+
+updateAnalytics();
+                    }
+                }, (error) => {
+           
+
+         console.error('Products listener error:', error);
+               
+
+     updateSyncStatus('❌ Sync Error', 'bg-red-100 text-red-
+
+800');
+                });
+            
+            // Listen for sales changes
+ 
+
+           if (unsubscribeSales) unsubscribeSales();
+            
+
+unsubscribeSales = db.collection('users').doc(userId).collection
+
+('sales')
+                .onSnapshot((snapshot) => {
+                    let 
+
+hasChanges = false;
+                    snapshot.docChanges
+
+().forEach((change) => {
+                        if (change.type === 
+
+'added' || change.type === 'modified') {
+                            
+
+const data = change.doc.data();
+                            const index = 
+
+sales.findIndex(s => s.id === data.id);
+                            
+            
+
+                if (index === -1) {
+                                sales.push
+
+(data);
+                                hasChanges = true;
+                        
+
+    } else {
+                                sales[index] = data;
+                   
+
+             hasChanges = true;
+                            }
+                        
+
+} else if (change.type === 'removed') {
+                            sales 
+
+= sales.filter(s => s.id !== change.doc.data().id);
+                          
+
+  hasChanges = true;
+                        }
+                    });
+               
+
+     
+                    if (hasChanges) {
+                        saveData();
+   
+
+                     updateSalesHistory();
+                        
+
+updateAnalytics();
+                    }
+                }, (error) => {
+           
+
+         console.error('Sales listener error:', error);
+                    
+
+updateSyncStatus('❌ Sync Error', 'bg-red-100 text-red-800');
+ 
+
+               });
+            
+            // Listen for color chart changes
+   
+
+         if (unsubscribeColors) unsubscribeColors();
+            
+
+unsubscribeColors = db.collection('users').doc
+
+(userId).collection('colors')
+                .onSnapshot((snapshot) 
+
+=> {
+                    let hasChanges = false;
+                    
+
+snapshot.docChanges().forEach((change) => {
+                        if 
+
+(change.type === 'added' || change.type === 'modified') {
+          
+
+                  const data = change.doc.data();
+                            
+
+const index = colorChart.findIndex(c => c.abbr === data.abbr);
+   
+
+                         
+                            if (index === -1) {
+               
+
+                 colorChart.push(data);
+                                
+
+hasChanges = true;
+                            } else {
+                            
+
+    colorChart[index] = data;
+                                hasChanges = 
+
+true;
+                            }
+                        } else if (change.type 
+
+=== 'removed') {
+                            colorChart = 
+
+colorChart.filter(c => c.abbr !== change.doc.data().abbr);
+            
+
+                hasChanges = true;
+                        }
+                    });
+ 
+
+                   
+                    if (hasChanges) {
+                        
+
+saveColorData();
+                        updateColorChart();
+                
+
+        updateColorDropdown();
+                    }
+                }, 
+
+(error) => {
+                    console.error('Colors listener error:', 
+
+error);
+                    updateSyncStatus('❌ Sync Error', 'bg-
+
+red-100 text-red-800');
+                });
+            
+            
+
+updateSyncStatus('✅ Synced', 'bg-green-100 text-green-
+
+800');
+        }
+
+        // Authentication functions
+        function 
+
+login() {
+            const email = document.getElementById
+
+('email').value;
+            const password = 
+
+document.getElementById('password').value;
+
+            if (!
+
+firebaseConfig || !firebaseConfig.apiKey || 
+
+firebaseConfig.apiKey === 'your-api-key') {
+                alert
+
+('Please set up Firebase configuration first.');
+                
+
+showTab('backup');
+                return;
+            }
+
+            if (!db) {
+ 
+
+               if (!initializeFirebase()) {
+                    alert('Failed to 
+
+initialize Firebase. Please check your configuration.');
+                
+
+    return;
+                }
+            }
+
+            // Try to sign in, and if 
+
+that fails, create a new account
+            
+
+auth.signInWithEmailAndPassword(email, password)
+                
+
+.then((userCredential) => {
+                    // Signed in 
+
+successfully
+                    currentUser = userCredential.user;
+     
+
+               localStorage.setItem('stockManager_userEmail', 
+
+email);
+                    localStorage.setItem
+
+('stockManager_userPassword', password);
+                    
+
+completeLogin();
+                })
+                .catch((signInError) => 
+
+{
+                    // If sign in fails, try to create a new account
+     
+
+               auth.createUserWithEmailAndPassword(email, 
+
+password)
+                        .then((userCredential) => {
+                 
+
+           // Account created successfully
+                            
+
+currentUser = userCredential.user;
+                            
+
+localStorage.setItem('stockManager_userEmail', email);
+           
+
+                 localStorage.setItem
+
+('stockManager_userPassword', password);
+                            
+  
+
+                          // Upload existing data to the new account
+     
+
+                       syncDataToFirebase().then(() => {
+                      
+
+          completeLogin();
+                            });
+                        })
+  
+
+                      .catch((createError) => {
+                            
+
+alert('Authentication error: ' + createError.message);
+               
+
+             console.error('Auth error:', createError);
+                   
+
+     });
+                });
+        }
+
+        function completeLogin() {
+           
+
+ localStorage.setItem('stockManager_loggedIn', 'true');
+          
+
+  showMainApp();
+            document.getElementById
+
+('userEmail').textContent = currentUser.email;
+        }
+
+        
+
+function logout() {
+            if (unsubscribeProducts) 
+
+unsubscribeProducts();
+            if (unsubscribeSales) 
+
+unsubscribeSales();
+            if (unsubscribeColors) 
+
+unsubscribeColors();
+            
+            if (auth) {
+                
+
+auth.signOut();
+            }
+            
+            
+
+localStorage.removeItem('stockManager_loggedIn');
+            
+
+localStorage.removeItem('stockManager_userEmail');
+            
+
+localStorage.removeItem('stockManager_userPassword');
+        
+
+    
+            document.getElementById
+
+('loginScreen').classList.remove('hidden');
+            
+
+document.getElementById('mainApp').classList.add('hidden');
+    
+
+        document.getElementById('email').value = '';
+            
+
+document.getElementById('password').value = '';
+            
+          
+
+  currentUser = null;
+        }
+
+        // Show main application
+        
+
+function showMainApp() {
+            document.getElementById
+
+('loginScreen').classList.add('hidden');
+            
+
+document.getElementById('mainApp').classList.remove
+
+('hidden');
+        }
+
+        // Show tab content
+        function 
+
+showTab(tabName) {
+            // Hide all tab contents
+            
+
+document.querySelectorAll('.tab-content').forEach(tab => {
+       
+
+         tab.classList.add('hidden');
+            });
+            
+            // 
+
+Deactivate all tab buttons
+            document.querySelectorAll
+
+('.tab-button').forEach(button => {
+                
+
+button.classList.remove('active');
+            });
+            
+            // 
+
+Show selected tab content
+            document.getElementById
+
+('tabContent' + tabName.charAt(0).toUpperCase() + 
+
+tabName.slice(1)).classList.remove('hidden');
+            
+            // 
+
+Activate selected tab button
+            
+
+document.getElementById('tab' + tabName.charAt
+
+(0).toUpperCase() + tabName.slice(1)).classList.add('active');
+      
+
+  }
+
+        // Generate SKU
+        function generateSKU(name, 
+
+size, colorAbbr) {
+            const namePart = name.substring(0, 
+
+3).toUpperCase();
+            const sizePart = size.toUpperCase();
+   
+
+         const colorPart = colorAbbr.toUpperCase();
+            const 
+
+randomPart = Math.floor(Math.random() * 1000).toString
+
+().padStart(3, '0');
+            
+            return `${namePart}-
+
+${sizePart}-${colorPart}-${randomPart}`;
+        }
+
+        // Add 
+
+new product
+        function addProduct() {
+            const name = 
+
+document.getElementById('productName').value;
+            const 
+
+size = document.getElementById('productSize').value;
+            
+
+const color = document.getElementById('productColor').value;
+   
+
+         const quantity = parseInt(document.getElementById
+
+('productQuantity').value);
+            const cost = parseFloat
+
+(document.getElementById('productCost').value);
+            const 
+
+price = parseFloat(document.getElementById
+
+('productPrice').value);
+            
+            const colorObj = 
+
+colorChart.find(c => c.abbr === color);
+            if (!colorObj) {
+    
+
+            alert('Please select a valid color');
+                return;
+     
+
+       }
+            
+            const sku = generateSKU(name, size, 
+
+color);
+            
+            const product = {
+                sku,
+             
+
+   name,
+                size,
+                color: colorObj.name,
+            
+
+    colorAbbr: colorObj.abbr,
+                quantity,
+                
+
+cost,
+                price,
+                totalSold: 0
+            };
+            
+   
+
+         products.push(product);
+            saveData();
+            
+         
+
+   if (db && currentUser) {
+                const productRef = 
+
+db.collection('users').doc(currentUser.uid).collection
+
+('products').doc(product.sku);
+                productRef.set
+
+(product)
+                    .then(() => {
+                        console.log
+
+('Product synced to Firebase');
+                    })
+                    
+
+.catch((error) => {
+                        console.error('Error syncing 
+
+product:', error);
+                    });
+            }
+            
+            // 
+
+Reset form
+            document.getElementById
+
+('addProductForm').reset();
+            updateProductList();
+           
+
+ 
+            alert('Product added successfully!');
+        }
+
+        // 
+
+Sell product
+        function sellProduct(sku, quantity = 1) {
+          
+
+  const product = products.find(p => p.sku === sku);
+            if 
+
+(!product) {
+                alert('Product not found!');
+                
+
+return;
+            }
+            
+            if (product.quantity < quantity) 
+
+{
+                alert(`Not enough stock! Only ${product.quantity} 
+
+available.`);
+                return;
+            }
+            
+            // 
+
+Check if product is already in the selected products
+            
+
+const existingIndex = selectedProductsForSale.findIndex(p => 
+
+p.sku === sku);
+            if (existingIndex !== -1) {
+                
+
+selectedProductsForSale[existingIndex].sellQuantity += 
+
+quantity;
+            } else {
+                
+
+selectedProductsForSale.push({
+                    ...product,
+             
+
+       sellQuantity: quantity
+                });
+            }
+            
+          
+
+  updateSelectedProducts();
+        }
+
+        // Update selected 
+
+products UI
+        function updateSelectedProducts() {
+            
+
+const container = document.getElementById
+
+('selectedProducts');
+            container.innerHTML = '';
+            
+ 
+
+           if (selectedProductsForSale.length === 0) {
+                
+
+container.innerHTML = '<p class="text-gray-500 text-center 
+
+py-4">No products selected</p>';
+                
+
+updateOrderSummary();
+                return;
+            }
+            
+      
+
+      let subtotal = 0;
+            
+            
+
+selectedProductsForSale.forEach((product, index) => {
+              
+
+  const productTotal = product.sellQuantity * product.price;
+      
+
+          subtotal += productTotal;
+                
+                const 
+
+productElement = document.createElement('div');
+                
+
+productElement.className = 'flex justify-between items-
+
+center p-3 bg-gray-50 rounded-lg';
+                
+
+productElement.innerHTML = `
+                    <div>
+                     
+
+   <h4 class="font-medium">${product.name} (${product.size}, 
+
+${product.color})</h4>
+                        <p class="text-sm text-
+
+gray-600">SKU: ${product.sku} | $${product.price} each</p>
+     
+
+               </div>
+                    <div class="flex items-center 
+
+space-x-2">
+                        <button onclick="changeQuantity
+
+(${index}, -1)" class="w-8 h-8 bg-gray-200 rounded-full flex 
+
+items-center justify-center">-</button>
+                        <span 
+
+class="font-medium">${product.sellQuantity}</span>
+                 
+
+       <button onclick="changeQuantity(${index}, 1)" class="w-8 
+
+h-8 bg-gray-200 rounded-full flex items-center justify-
+
+center">+</button>
+                        <span class="font-medium 
+
+ml-2">$${productTotal.toFixed(2)}</span>
+                        
+
+<button onclick="removeFromSale(${index})" class="ml-2 text-
+
+red-600 hover:text-red-800">
+                            ❌
+                    
+
+    </button>
+                    </div>
+                `;
+                
+             
+
+   container.appendChild(productElement);
+            });
+            
+     
+
+       updateOrderSummary();
+        }
+
+        // Change quantity of 
+
+product in sale
+        function changeQuantity(index, change) {
+    
+
+        const product = selectedProductsForSale[index];
+            
+
+const newQuantity = product.sellQuantity + change;
+            
+      
+
+      if (newQuantity < 1) {
+                removeFromSale(index);
+     
+
+           return;
+            }
+            
+            if (newQuantity > 
+
+product.quantity) {
+                alert(`Cannot sell more than 
+
+available stock (${product.quantity})`);
+                return;
+          
+
+  }
+            
+            selectedProductsForSale[index].sellQuantity 
+
+= newQuantity;
+            updateSelectedProducts();
+        }
+
+        
+
+// Remove product from sale
+        function removeFromSale
+
+(index) {
+            selectedProductsForSale.splice(index, 1);
+          
+
+  updateSelectedProducts();
+        }
+
+        // Update order 
+
+summary
+        function updateOrderSummary() {
+            let 
+
+subtotal = 0;
+            
+            selectedProductsForSale.forEach
+
+(product => {
+                subtotal += product.sellQuantity * 
+
+product.price;
+            });
+            
+            const tax = subtotal * 
+
+0.1; // 10% tax
+            const total = subtotal + tax;
+            
+      
+
+      document.getElementById('orderSubtotal').textContent = 
+
+`$${subtotal.toFixed(2)}`;
+            document.getElementById
+
+('orderTax').textContent = `$${tax.toFixed(2)}`;
+            
+
+document.getElementById('orderTotal').textContent = `$
+
+${total.toFixed(2)}`;
+        }
+
+        // Complete sale
+        function 
+
+completeSale() {
+            if (selectedProductsForSale.length === 
+
+0) {
+                alert('No products selected for sale');
+                
+
+return;
+            }
+            
+            const saleId = Date.now();
+       
+
+     const saleDate = new Date().toISOString();
+            let 
+
+totalAmount = 0;
+            
+            // Process each product in 
+
+the sale
+            selectedProductsForSale.forEach(product => {
+  
+
+              // Update product quantity and total sold
+                
+
+const productIndex = products.findIndex(p => p.sku === 
+
+product.sku);
+                if (productIndex !== -1) {
+                    
+
+products[productIndex].quantity -= product.sellQuantity;
+          
+
+          products[productIndex].totalSold += 
+
+product.sellQuantity;
+                    
+                    // Add to 
+
+sales history
+                    const saleItem = {
+                        id: 
+
+saleId,
+                        date: saleDate,
+                        sku: 
+
+product.sku,
+                        name: product.name,
+                      
+
+  size: product.size,
+                        color: product.color,
+            
+
+            quantity: product.sellQuantity,
+                        price: 
+
+product.price,
+                        total: product.sellQuantity * 
+
+product.price
+                    };
+                    
+                    
+
+sales.push(saleItem);
+                    totalAmount += 
+
+saleItem.total;
+                    
+                    // Sync to Firebase 
+
+if available
+                    if (db && currentUser) {
+                      
+
+  const saleRef = db.collection('users').doc
+
+(currentUser.uid).collection('sales').doc(saleItem.id.toString());
+  
+
+                      saleRef.set(saleItem)
+                            .then(() 
+
+=> {
+                                console.log('Sale synced to 
+
+Firebase');
+                            })
+                            .catch
+
+((error) => {
+                                console.error('Error syncing 
+
+sale:', error);
+                            });
+                        
+                  
+
+      // Update product in Firebase
+                        const 
+
+productRef = db.collection('users').doc
+
+(currentUser.uid).collection('products').doc(product.sku);
+          
+
+              productRef.update({
+                            quantity: 
+
+products[productIndex].quantity,
+                            totalSold: 
+
+products[productIndex].totalSold
+                        })
+                  
+
+      .catch((error) => {
+                            console.error('Error 
+
+updating product:', error);
+                        });
+                    }
+      
+
+          }
+            });
+            
+            // Save data locally
+            
+
+saveData();
+            
+            // Update UI
+            
+
+updateProductList();
+            updateSalesHistory();
+            
+
+updateAnalytics();
+            
+            // Reset sale
+            
+
+selectedProductsForSale = [];
+            updateSelectedProducts
+
+();
+            document.getElementById('sellProductSearch').value 
+
+= '';
+            
+            alert(`Sale completed successfully! Total: 
+
+$${totalAmount.toFixed(2)}`);
+        }
+
+        // Show sell 
+
+suggestions
+        function showSellSuggestions() {
+            const 
+
+searchTerm = document.getElementById
+
+('sellProductSearch').value.toLowerCase();
+            if (!
+
+searchTerm) {
+                hideSellSuggestions();
+                
+
+return;
+            }
+            
+            const filteredProducts = 
+
+products.filter(product => 
+                
+
+product.name.toLowerCase().includes(searchTerm) ||
+                
+
+product.sku.toLowerCase().includes(searchTerm) ||
+                
+
+product.size.toLowerCase().includes(searchTerm) ||
+                
+
+product.color.toLowerCase().includes(searchTerm)
+            );
+      
+
+      
+            const suggestionsContainer = 
+
+document.getElementById('sellSuggestions');
+            
+
+suggestionsContainer.innerHTML = '';
+            
+            if 
+
+(filteredProducts.length === 0) {
+                
+
+suggestionsContainer.innerHTML = '<div class="p-3 text-gray-
+
+500">No products found</div>';
+                
+
+suggestionsContainer.classList.remove('hidden');
+                
+
+return;
+            }
+            
+            filteredProducts.forEach
+
+(product => {
+                const suggestionItem = 
+
+document.createElement('div');
+                
+
+suggestionItem.className = 'suggestion-item p-3 border-b 
+
+border-gray-200 cursor-pointer hover:bg-gray-100';
+                
+
+suggestionItem.innerHTML = `
+                    <div class="font-
+
+medium">${product.name} (${product.size}, ${product.color})
+
+</div>
+                    <div class="text-sm text-gray-600">SKU: 
+
+${product.sku} | Stock: ${product.quantity} | Price: $
+
+${product.price}</div>
+                `;
+                
+                
+
+suggestionItem.addEventListener('click', () => {
+                    
+
+sellProduct(product.sku, 1);
+                    hideSellSuggestions();
+  
+
+                  document.getElementById
+
+('sellProductSearch').value = '';
+                });
+                
+            
+
+    suggestionsContainer.appendChild(suggestionItem);
+            
+
+});
+            
+            suggestionsContainer.classList.remove
+
+('hidden');
+        }
+
+        // Hide sell suggestions
+        function 
+
+hideSellSuggestions(event) {
+            const suggestionsContainer 
+
+= document.getElementById('sellSuggestions');
+            const 
+
+searchInput = document.getElementById('sellProductSearch');
+  
+
+          
+            if (event && event.target === searchInput) {
+       
+
+         return;
+            }
+            
+            
+
+suggestionsContainer.classList.add('hidden');
+        }
+
+        // 
+
+Update product list
+        function updateProductList() {
+            
+
+const productList = document.getElementById('productList');
+    
+
+        productList.innerHTML = '';
+            
+            if 
+
+(products.length === 0) {
+                productList.innerHTML = 
+
+'<tr><td colspan="8" class="px-6 py-4 text-center text-gray-
+
+500">No products found</td></tr>';
+                return;
+            }
+  
+
+          
+            products.forEach(product => {
+                const 
+
+row = document.createElement('tr');
+                row.innerHTML 
+
+= `
+                    <td class="px-6 py-4 whitespace-nowrap 
+
+text-sm font-medium text-gray-900">${product.sku}</td>
+         
+
+           <td class="px-6 py-4 whitespace-nowrap text-sm text-
+
+gray-500">${product.name}</td>
+                    <td class="px-6 
+
+py-4 whitespace-nowrap text-sm text-gray-500">
+
+${product.size}</td>
+                    <td class="px-6 py-4 
+
+whitespace-nowrap text-sm text-gray-500">
+                        
+
+<span class="inline-block w-3 h-3 rounded-full mr-1" 
+
+style="background-color: ${colorChart.find(c => c.name === 
+
+product.color)?.color || '#ccc'}"></span>
+                        
+
+${product.color}
+                    </td>
+                    <td 
+
+class="px-6 py-4 whitespace-nowrap text-sm text-gray-
+
+500">${product.quantity}</td>
+                    <td class="px-6 
+
+py-4 whitespace-nowrap text-sm text-gray-500">$
+
+${product.cost.toFixed(2)}</td>
+                    <td class="px-6 
+
+py-4 whitespace-nowrap text-sm text-gray-500">$
+
+${product.price.toFixed(2)}</td>
+                    <td class="px-6 
+
+py-4 whitespace-nowrap text-sm font-medium">
+                       
+
+ <button onclick="sellProduct('${product.sku}', 1)" class="text-
+
+green-600 hover:text-green-900 mr-2">Sell</button>
+               
+
+         <button onclick="editProduct('${product.sku}')" 
+
+class="text-blue-600 hover:text-blue-900 mr-2">Edit</button>
+ 
+
+                       <button onclick="deleteProduct
+
+('${product.sku}')" class="text-red-600 hover:text-red-
+
+900">Delete</button>
+                    </td>
+                `;
+                
+                productList.appendChild(row);
+            });
+        }
+
+        
+
+// Edit product
+        function editProduct(sku) {
+            const 
+
+product = products.find(p => p.sku === sku);
+            if (!
+
+product) return;
+            
+            document.getElementById
+
+('productName').value = product.name;
+            
+
+document.getElementById('productSize').value = product.size;
+  
+
+          document.getElementById('productColor').value = 
+
+product.colorAbbr;
+            document.getElementById
+
+('productQuantity').value = product.quantity;
+            
+
+document.getElementById('productCost').value = product.cost;
+  
+
+          document.getElementById('productPrice').value = 
+
+product.price;
+            
+            // Change form to edit mode
+       
+
+     const form = document.getElementById
+
+('addProductForm');
+            form.onsubmit = function(e) {
+         
+
+       e.preventDefault();
+                updateProduct(sku);
+            
+
+};
+            
+            const submitButton = form.querySelector
+
+('button[type="submit"]');
+            submitButton.textContent = 
+
+'Update Product';
+            
+            // Scroll to form
+            
+
+document.getElementById('productName').focus();
+            
+
+showTab('inventory');
+        }
+
+        // Update product
+        
+
+function updateProduct(sku) {
+            const name = 
+
+document.getElementById('productName').value;
+            const 
+
+size = document.getElementById('productSize').value;
+            
+
+const color = document.getElementById('productColor').value;
+   
+
+         const quantity = parseInt(document.getElementById
+
+('productQuantity').value);
+            const cost = parseFloat
+
+(document.getElementById('productCost').value);
+            const 
+
+price = parseFloat(document.getElementById
+
+('productPrice').value);
+            
+            const colorObj = 
+
+colorChart.find(c => c.abbr === color);
+            if (!colorObj) {
+    
+
+            alert('Please select a valid color');
+                return;
+     
+
+       }
+            
+            const productIndex = 
+
+products.findIndex(p => p.sku === sku);
+            if 
+
+(productIndex === -1) {
+                alert('Product not found');
+    
+
+            return;
+            }
+            
+            // Generate new SKU 
+
+if name, size or color changed
+            let newSku = sku;
+            
+
+if (products[productIndex].name !== name || 
+                
+
+products[productIndex].size !== size || 
+                products
+
+[productIndex].colorAbbr !== color) {
+                newSku = 
+
+generateSKU(name, size, color);
+            }
+            
+            
+
+products[productIndex] = {
+                ...products
+
+[productIndex],
+                sku: newSku,
+                name,
+           
+
+     size,
+                color: colorObj.name,
+                colorAbbr: 
+
+colorObj.abbr,
+                quantity,
+                cost,
+                
+
+price
+            };
+            
+            saveData();
+            
+            if 
+
+(db && currentUser) {
+                // If SKU changed, we need 
+
+to delete the old document and create a new one
+                if 
+
+(newSku !== sku) {
+                    const oldProductRef = 
+
+db.collection('users').doc(currentUser.uid).collection
+
+('products').doc(sku);
+                    oldProductRef.delete();
+        
+
+        }
+                
+                const productRef = db.collection
+
+('users').doc(currentUser.uid).collection('products').doc
+
+(newSku);
+                productRef.set(products[productIndex])
+   
+
+                 .then(() => {
+                        console.log('Product 
+
+updated in Firebase');
+                    })
+                    .catch
+
+((error) => {
+                        console.error('Error updating 
+
+product:', error);
+                    });
+            }
+            
+            // 
+
+Reset form
+            document.getElementById
+
+('addProductForm').reset();
+            const form = 
+
+document.getElementById('addProductForm');
+            
+
+form.onsubmit = function(e) {
+                e.preventDefault();
+       
+
+         addProduct();
+            };
+            
+            const 
+
+submitButton = form.querySelector('button[type="submit"]');
+    
+
+        submitButton.textContent = 'Add Product';
+            
+           
+
+ updateProductList();
+            alert('Product updated 
+
+successfully!');
+        }
+
+        // Delete product
+        function 
+
+deleteProduct(sku) {
+            if (!confirm('Are you sure you 
+
+want to delete this product?')) {
+                return;
+            }
+       
+
+     
+            const productIndex = products.findIndex(p => p.sku 
+
+=== sku);
+            if (productIndex === -1) {
+                alert
+
+('Product not found');
+                return;
+            }
+            
+          
+
+  products.splice(productIndex, 1);
+            saveData();
+            
+  
+
+          if (db && currentUser) {
+                const productRef = 
+
+db.collection('users').doc(currentUser.uid).collection
+
+('products').doc(sku);
+                productRef.delete()
+                 
+
+   .then(() => {
+                        console.log('Product deleted 
+
+from Firebase');
+                    })
+                    .catch((error) => {
+ 
+
+                       console.error('Error deleting product:', error);
+  
+
+                  });
+            }
+            
+            updateProductList();
+     
+
+       alert('Product deleted successfully!');
+        }
+
+        // 
+
+Update sales history
+        function updateSalesHistory() {
+          
+
+  const salesHistory = document.getElementById
+
+('salesHistory');
+            salesHistory.innerHTML = '';
+            
+    
+
+        const filter = document.getElementById
+
+('salesFilter').value;
+            let filteredSales = [...sales];
+            
+            // Apply filter
+            if (filter !== 'all') {
+                
+
+const now = new Date();
+                filteredSales = sales.filter
+
+(sale => {
+                    const saleDate = new Date(sale.date);
+     
+
+               
+                    switch (filter) {
+                        case 
+
+'today':
+                            return saleDate.toDateString() === 
+
+now.toDateString();
+                        case 'week':
+                      
+
+      const weekStart = new Date(now);
+                            
+
+weekStart.setDate(now.getDate() - now.getDay());
+                    
+
+        weekStart.setHours(0, 0, 0, 0);
+                            return 
+
+saleDate >= weekStart;
+                        case 'month':
+                
+
+            return saleDate.getMonth() === now.getMonth() && 
+
+saleDate.getFullYear() === now.getFullYear();
+                        
+
+default:
+                            return true;
+                    }
+               
+
+ });
+            }
+            
+            if (filteredSales.length === 0) {
+      
+
+          salesHistory.innerHTML = '<tr><td colspan="6" 
+
+class="px-6 py-4 text-center text-gray-500">No sales 
+
+found</td></tr>';
+                return;
+            }
+            
+            // 
+
+Group sales by sale ID
+            const salesByTransaction = {};
+    
+
+        filteredSales.forEach(sale => {
+                if (!
+
+salesByTransaction[sale.id]) {
+                    salesByTransaction
+
+[sale.id] = {
+                        date: sale.date,
+                        
+
+items: [],
+                        total: 0
+                    };
+                }
+      
+
+          
+                salesByTransaction[sale.id].items.push(sale);
+    
+
+            salesByTransaction[sale.id].total += sale.total;
+            
+
+});
+            
+            // Display sales
+            Object.keys
+
+(salesByTransaction).forEach(saleId => {
+                const 
+
+transaction = salesByTransaction[saleId];
+                const 
+
+saleDate = new Date(transaction.date);
+                
+                // 
+
+Add transaction header
+                const headerRow = 
+
+document.createElement('tr');
+                headerRow.className 
+
+= 'bg-gray-50';
+                headerRow.innerHTML = `
+                
+
+    <td class="px-6 py-2 whitespace-nowrap text-sm font-
+
+medium text-gray-900" colspan="6">
+                        Sale #
+
+${saleId} - ${saleDate.toLocaleDateString()} 
+
+${saleDate.toLocaleTimeString()} - Total: $
+
+${transaction.total.toFixed(2)}
+                    </td>
+                `;
+   
+
+             salesHistory.appendChild(headerRow);
+                
+         
+
+       // Add items
+                transaction.items.forEach(item => {
+ 
+
+                   const row = document.createElement('tr');
+            
+
+        row.innerHTML = `
+                        <td class="px-6 py-4 
+
+whitespace-nowrap text-sm text-gray-500"></td>
+                     
+
+   <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-
+
+500">${item.sku}</td>
+                        <td class="px-6 py-4 
+
+whitespace-nowrap text-sm text-gray-500">${item.name} 
+
+(${item.size}, ${item.color})</td>
+                        <td 
+
+class="px-6 py-4 whitespace-nowrap text-sm text-gray-
+
+500">${item.quantity}</td>
+                        <td class="px-6 py-4 
+
+whitespace-nowrap text-sm text-gray-500">$
+
+${item.price.toFixed(2)}</td>
+                        <td class="px-6 
+
+py-4 whitespace-nowrap text-sm text-gray-500">$
+
+${item.total.toFixed(2)}</td>
+                    `;
+                    
+
+salesHistory.appendChild(row);
+                });
+            });
+        }
+
+     
+
+   // Update analytics
+        function updateAnalytics() {
+            
+
+// Calculate total sales
+            const totalSales = sales.reduce
+
+((sum, sale) => sum + sale.total, 0);
+            
+
+document.getElementById('totalSalesValue').textContent = `
+
+$${totalSales.toFixed(2)}`;
+            
+            // Calculate total 
+
+profit
+            let totalProfit = 0;
+            sales.forEach(sale => {
+ 
+
+               const product = products.find(p => p.sku === 
+
+sale.sku);
+                if (product) {
+                    totalProfit += 
+
+(sale.price - product.cost) * sale.quantity;
+                }
+            });
+ 
+
+           document.getElementById
+
+('totalProfitValue').textContent = `$${totalProfit.toFixed(2)}`;
+ 
+
+           
+            // Calculate total items sold
+            const 
+
+totalItems = sales.reduce((sum, sale) => sum + sale.quantity, 0);
+  
+
+          document.getElementById
+
+('totalItemsValue').textContent = totalItems.toString();
+            
+            // Find top selling products
+            const productSales 
+
+= {};
+            sales.forEach(sale => {
+                if (!productSales
+
+[sale.sku]) {
+                    productSales[sale.sku] = {
+                   
+
+     name: sale.name,
+                        quantity: 0,
+                        
+
+revenue: 0
+                    };
+                }
+                
+                
+
+productSales[sale.sku].quantity += sale.quantity;
+                
+
+productSales[sale.sku].revenue += sale.total;
+            });
+            
+  
+
+          const topProducts = Object.values(productSales)
+            
+
+    .sort((a, b) => b.quantity - a.quantity)
+                .slice(0, 5);
+    
+
+        
+            const topProductsContainer = 
+
+document.getElementById('topProducts');
+            
+
+topProductsContainer.innerHTML = '';
+            
+            if 
+
+(topProducts.length === 0) {
+                
+
+topProductsContainer.innerHTML = '<p class="text-gray-
+
+500">No sales data available</p>';
+                return;
+            }
+    
+
+        
+            topProducts.forEach(product => {
+                const 
+
+productElement = document.createElement('div');
+                
+
+productElement.className = 'flex justify-between items-
+
+center p-2 bg-gray-50 rounded';
+                
+
+productElement.innerHTML = `
+                    <span 
+
+class="font-medium">${product.name}</span>
+                    <div>
+ 
+
+                       <span class="text-sm text-gray-600 mr-4">
+
+${product.quantity} sold</span>
+                        <span 
+
+class="text-sm font-medium">$${product.revenue.toFixed(2)}
+
+</span>
+                    </div>
+                `;
+                
+
+topProductsContainer.appendChild(productElement);
+            });
+   
+
+     }
+
+        // Generate report
+        function generateReport() {
+   
+
+         const reportType = document.getElementById
+
+('reportType').value;
+            let startDate, endDate;
+            
+     
+
+       if (reportType === 'custom') {
+                startDate = new 
+
+Date(document.getElementById('startDate').value);
+                
+
+endDate = new Date(document.getElementById
+
+('endDate').value);
+                
+                if (isNaN
+
+(startDate.getTime()) || isNaN(endDate.getTime())) {
+                
+
+    alert('Please select valid start and end dates');
+                    
+
+return;
+                }
+                
+                endDate.setHours(23, 
+
+59, 59, 999); // Include the entire end date
+            } else {
+      
+
+          endDate = new Date();
+                endDate.setHours(23, 
+
+59, 59, 999);
+                
+                switch (reportType) {
+          
+
+          case 'daily':
+                        startDate = new Date();
+       
+
+                 startDate.setHours(0, 0, 0, 0);
+                        
+
+break;
+                    case 'weekly':
+                        startDate = 
+
+new Date();
+                        startDate.setDate
+
+(endDate.getDate() - 7);
+                        startDate.setHours(0, 
+
+0, 0, 0);
+                        break;
+                    case 'monthly':
+      
+
+                  startDate = new Date();
+                        
+
+startDate.setMonth(endDate.getMonth() - 1);
+                        
+
+startDate.setHours(0, 0, 0, 0);
+                        break;
+               
+
+ }
+            }
+            
+            // Filter sales by date range
+            
+
+const filteredSales = sales.filter(sale => {
+                const 
+
+saleDate = new Date(sale.date);
+                return saleDate >= 
+
+startDate && saleDate <= endDate;
+            });
+            
+            
+
+// Calculate report data
+            const totalSales = 
+
+filteredSales.reduce((sum, sale) => sum + sale.total, 0);
+            
+
+const totalItems = filteredSales.reduce((sum, sale) => sum + 
+
+sale.quantity, 0);
+            
+            let totalProfit = 0;
+            
+
+filteredSales.forEach(sale => {
+                const product = 
+
+products.find(p => p.sku === sale.sku);
+                if (product) {
+    
+
+                totalProfit += (sale.price - product.cost) * 
+
+sale.quantity;
+                }
+            });
+            
+            // Group 
+
+by product
+            const productSales = {};
+            
+
+filteredSales.forEach(sale => {
+                if (!productSales
+
+[sale.sku]) {
+                    productSales[sale.sku] = {
+                   
+
+     name: sale.name,
+                        quantity: 0,
+                        
+
+revenue: 0
+                    };
+                }
+                
+                
+
+productSales[sale.sku].quantity += sale.quantity;
+                
+
+productSales[sale.sku].revenue += sale.total;
+            });
+            
+  
+
+          // Display report
+            const reportResults = 
+
+document.getElementById('reportResults');
+            
+
+reportResults.innerHTML = `
+                <div class="grid grid-
+
+cols-1 md:grid-cols-3 gap-4 mb-6">
+                    <div 
+
+class="bg-blue-50 p-4 rounded-lg">
+                        <h4 
+
+class="text-lg font-medium text-blue-800">Total Sales</h4>
+     
+
+                   <p class="text-2xl font-bold">$
+
+${totalSales.toFixed(2)}</p>
+                    </div>
+                    
+
+<div class="bg-green-50 p-4 rounded-lg">
+                        <h4 
+
+class="text-lg font-medium text-green-800">Total Profit</h4>
+  
+
+                      <p class="text-2xl font-bold">$
+
+${totalProfit.toFixed(2)}</p>
+                    </div>
+                    
+
+<div class="bg-purple-50 p-4 rounded-lg">
+                        <h4 
+
+class="text-lg font-medium text-purple-800">Items Sold</h4>
+  
+
+                      <p class="text-2xl font-bold">${totalItems}</p>
+  
+
+                  </div>
+                </div>
+                <h4 class="text-lg 
+
+font-medium text-gray-800 mb-4">Top Selling Products</h4>
+    
+
+            <div class="space-y-2">
+                    ${Object.values
+
+(productSales)
+                        .sort((a, b) => b.quantity - 
+
+a.quantity)
+                        .slice(0, 5)
+                        .map
+
+(product => `
+                            <div class="flex justify-
+
+between items-center p-2 bg-gray-50 rounded">
+                       
+
+         <span class="font-medium">${product.name}</span>
+          
+
+                      <div>
+                                    <span class="text-
+
+sm text-gray-600 mr-4">${product.quantity} sold</span>
+           
+
+                         <span class="text-sm font-medium">$
+
+${product.revenue.toFixed(2)}</span>
+                                
+
+</div>
+                            </div>
+                        `).join('')}
+          
+
+      </div>
+            `;
+        }
+
+        // Add new color
+        function 
+
+addNewColor() {
+            const name = 
+
+document.getElementById('colorName').value;
+            const 
+
+abbr = document.getElementById
+
+('colorAbbr').value.toLowerCase();
+            const color = 
+
+document.getElementById('colorCode').value;
+            
+            if 
+
+(abbr.length !== 2) {
+                alert('Abbreviation must be 
+
+exactly 2 characters');
+                return;
+            }
+            
+        
+
+    if (colorChart.find(c => c.abbr === abbr)) {
+                alert
+
+('A color with this abbreviation already exists');
+                
+
+return;
+            }
+            
+            const newColor = { name, abbr, 
+
+color };
+            colorChart.push(newColor);
+            
+
+saveColorData();
+            
+            if (db && currentUser) {
+          
+
+      const colorRef = db.collection('users').doc
+
+(currentUser.uid).collection('colors').doc(newColor.abbr);
+          
+
+      colorRef.set(newColor)
+                    .then(() => {
+                 
+
+       console.log('Color synced to Firebase');
+                    })
+       
+
+             .catch((error) => {
+                        console.error('Error 
+
+syncing color:', error);
+                    });
+            }
+            
+            
+
+// Reset form
+            document.getElementById
+
+('addColorForm').reset();
+            document.getElementById
+
+('colorCode').value = '#000000';
+            
+            
+
+updateColorChart();
+            updateColorDropdown();
+            
+     
+
+       alert('Color added successfully!');
+        }
+
+        // Update 
+
+color dropdown
+        function updateColorDropdown() {
+            
+
+const colorSelect = document.getElementById('productColor');
+ 
+
+           colorSelect.innerHTML = '<option value="">Select 
+
+Color</option>';
+            
+            colorChart.forEach(color => {
+     
+
+           const option = document.createElement('option');
+           
+
+     option.value = color.abbr;
+                option.textContent = 
+
+color.name;
+                colorSelect.appendChild(option);
+            
+
+});
+        }
+
+        // Update color chart
+        function 
+
+updateColorChart() {
+            const colorChartContainer = 
+
+document.getElementById('colorChart');
+            
+
+colorChartContainer.innerHTML = '';
+            
+            
+
+colorChart.forEach(color => {
+                const colorElement = 
+
+document.createElement('div');
+                
+
+colorElement.className = 'flex items-center p-2 bg-gray-50 
+
+rounded';
+                colorElement.innerHTML = `
+                    
+
+<span class="inline-block w-6 h-6 rounded-full mr-2" 
+
+style="background-color: ${color.color}"></span>
+                    
+
+<span class="font-medium">${color.name} (${color.abbr})
+
+</span>
+                `;
+                
+
+colorChartContainer.appendChild(colorElement);
+            });
+        
+
+}
+
+        // Save Firebase config
+        function 
+
+saveFirebaseConfig() {
+            try {
+                const configText 
+
+= document.getElementById('firebaseConfig').value;
+                
+
+const newConfig = JSON.parse(configText);
+                
+             
+
+   // Validate the config
+                if (!newConfig.apiKey || !
+
+newConfig.authDomain || !newConfig.projectId) {
+                    
+
+alert('Please provide a valid Firebase configuration');
+                
+
+    return;
+                }
+                
+                firebaseConfig = 
+
+newConfig;
+                localStorage.setItem
+
+('stockManager_firebaseConfig', JSON.stringify(newConfig));
+  
+
+              
+                // Reinitialize Firebase
+                
+
+initializeFirebase();
+                
+                alert('Firebase 
+
+configuration saved successfully!');
+            } catch (error) {
+      
+
+          alert('Invalid JSON configuration: ' + error.message);
+    
+
+        }
+        }
+
+        // Test Firebase connection
+        function 
+
+testFirebaseConnection() {
+            if (initializeFirebase()) {
+         
+
+       alert('Firebase connected successfully!');
+            } else {
+    
+
+            alert('Failed to connect to Firebase. Please check your 
+
+configuration.');
+            }
+        }
+
+        // Export data
+        
+
+function exportData() {
+            const data = {
+                
+
+products,
+                sales,
+                colors: colorChart,
+             
+
+   exportedAt: new Date().toISOString()
+            };
+            
+        
+
+    const dataStr = JSON.stringify(data, null, 2);
+            const 
+
+dataUri = 'data:application/json;charset=utf-8,'+ 
+
+encodeURIComponent(dataStr);
+            
+            const 
+
+exportFileDefaultName = `stock_manager_backup_${new 
+
+Date().toISOString().slice(0, 10)}.json`;
+            
+            const 
+
+linkElement = document.createElement('a');
+            
+
+linkElement.setAttribute('href', dataUri);
+            
+
+linkElement.setAttribute('download', exportFileDefaultName);
+   
+
+         linkElement.click();
+        }
+
+        // Import data
+        
+
+function importData() {
+            const fileInput = 
+
+document.getElementById('importFile');
+            const file = 
+
+fileInput.files[0];
+            
+            if (!file) {
+                alert
+
+('Please select a backup file to import');
+                return;
+         
+
+   }
+            
+            if (!confirm('This will replace all your 
+
+current data. Are you sure?')) {
+                return;
+            }
+        
+
+    
+            const reader = new FileReader();
+            
+
+reader.onload = function(e) {
+                try {
+                    const 
+
+data = JSON.parse(e.target.result);
+                    
+                    
+
+if (data.products) products = data.products;
+                    if 
+
+(data.sales) sales = data.sales;
+                    if (data.colors) 
+
+colorChart = data.colors;
+                    
+                    saveData
+
+();
+                    saveColorData();
+                    
+                    if 
+
+(db && currentUser) {
+                        syncDataToFirebase();
+    
+
+                }
+                    
+                    updateProductList();
+      
+
+              updateSalesHistory();
+                    updateAnalytics();
+ 
+
+                   updateColorChart();
+                    
+
+updateColorDropdown();
+                    
+                    alert('Data 
+
+imported successfully!');
+                } catch (error) {
+                  
+
+  alert('Error importing data: ' + error.message);
+                }
+     
+
+       };
+            reader.readAsText(file);
+        }
+
+        // Sync 
+
+data to Firebase
+        function syncDataToFirebase() {
+            
+
+if (!db || !currentUser) {
+                return Promise.resolve();
+      
+
+      }
+            
+            updateSyncStatus('🔄 Syncing...', 'bg-
+
+yellow-100 text-yellow-800');
+            
+            const userId = 
+
+currentUser.uid;
+            const batch = db.batch();
+            
+         
+
+   // Sync products
+            const productsRef = db.collection
+
+('users').doc(userId).collection('products');
+            
+
+products.forEach(product => {
+                const docRef = 
+
+productsRef.doc(product.sku);
+                batch.set(docRef, 
+
+product);
+            });
+            
+            // Sync sales
+            const 
+
+salesRef = db.collection('users').doc(userId).collection('sales');
+ 
+
+           sales.forEach(sale => {
+                const docRef = 
+
+salesRef.doc(sale.id.toString());
+                batch.set(docRef, 
+
+sale);
+            });
+            
+            // Sync colors
+            const 
+
+colorsRef = db.collection('users').doc(userId).collection
+
+('colors');
+            colorChart.forEach(color => {
+                const 
+
+docRef = colorsRef.doc(color.abbr);
+                batch.set
+
+(docRef, color);
+            });
+            
+            return 
+
+batch.commit()
+                .then(() => {
+                    
+
+updateSyncStatus('✅ Synced', 'bg-green-100 text-green-
+
+800');
+                    return true;
+                })
+                .catch
+
+((error) => {
+                    updateSyncStatus('❌ Sync Error', 
+
+'bg-red-100 text-red-800');
+                    console.error('Sync 
+
+error:', error);
+                    return false;
+                });
+        }
+
+    
+
+    // Manual sync function
+        function syncData() {
+            if 
+
+(!db || !currentUser) {
+                alert('Please set up Firebase 
+
+and log in first.');
+                return;
+            }
+            
+            
+
+syncDataToFirebase();
+        }
+
+        // Save data to localStorage
+ 
+
+       function saveData() {
+            localStorage.setItem
+
+('stockManager_products', JSON.stringify(products));
+            
+
+localStorage.setItem('stockManager_sales', JSON.stringify
+
+(sales));
+        }
+
+        // Save color data to localStorage
+        
+
+function saveColorData() {
+            localStorage.setItem
+
+('stockManager_colors', JSON.stringify(colorChart));
+        }
+
+     
+
+   // Update sync status display
+        function 
+
+updateSyncStatus(text, className) {
+            const status = 
+
+document.getElementById('syncStatus');
+            
+
+status.textContent = text;
+            status.className = `ml-4 
+
+px-3 py-1 rounded-full text-sm font-medium ${className}`;
+    
+
+    }
+    </script>
+</body>
+</html>
